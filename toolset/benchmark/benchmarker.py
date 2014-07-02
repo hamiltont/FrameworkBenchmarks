@@ -1014,6 +1014,8 @@ class Benchmarker:
         self.results = json.load(f)
     except (ValueError, IOError):
       pass
+    else:
+      self.results = results
 
   ############################################################
   # __finish
