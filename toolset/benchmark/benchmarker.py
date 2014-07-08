@@ -962,7 +962,7 @@ class Benchmarker:
       self.client_ssh_string = self.client_ssh_string + " -i " + self.client_identity_file
 
     if self.install is not None:
-      install = Installer(self, self.install_strategy)
+      install = Installer(self, self.install_strategy, self.docker)
       install.install_software()
 
   ############################################################

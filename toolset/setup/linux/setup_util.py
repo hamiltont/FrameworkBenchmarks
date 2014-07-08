@@ -2,6 +2,7 @@ import re
 import os
 import subprocess
 import platform
+import docker
 
 # Replaces all text found using the regular expression to_replace with the supplied replacement.
 def replace_text(file, to_replace, replacement):
@@ -100,3 +101,64 @@ def get_fwroot():
 def path_relative_to_root(path):
     # Requires bash shell parameter expansion
     return subprocess.check_output("D=%s && printf \"${D#%s}\""%(path, get_fwroot()), shell=True, executable='/bin/bash')
+
+##########################################################
+#
+#  Move these all to docker-utils
+#
+##########################################################
+
+import json
+
+def get_client(): 
+    c = docker.Client(base_url='http://127.0.0.1:4243',
+                  version='1.12',
+                  timeout=10)
+    # c = docker.Client(base_url='http://127.0.0.1:4243',version='1.12',timeout=10)
+    # cont=c.create_container('ubuntu', command='echo hello')
+    # c.start(cont['Id'])
+    return c
+
+def print_json_stream(string):
+    line=json.loads(string)
+    if 'stream' in line.keys():
+        for unique_line in line['stream'].strip().split('\n'):
+            print "DOCKER: %s" % unique_line
+    if 'error' in line.keys():
+        print "DOCKER:   %s" % line['error'].strip()
+
+def is_running(container_id):
+    c = get_client()
+    for container in c.containers():
+        if container['Id'].startswith(container_id):
+            return True
+    return False
+
+def inside_container():
+    # Using http://stackoverflow.com/a/23558932/119592
+    try:
+        lines=subprocess.check_output("cat /proc/1/cgroup | grep docker | wc -l", shell=True)
+
+        if lines.strip() == "0":
+            return False
+        return True
+    except: 
+        return False
+
+# Returns True if image exists with given tag
+def exists(image=None):
+    c = docker.Client(base_url='http://127.0.0.1:4243',
+                  version='1.12',
+                  timeout=10)
+    images = c.images(image)
+    return len(images) > 0
+
+
+# Launches container, runs command, saves new image
+def run_in_container(cid, command):
+   c.create_container(image, command=None, hostname=None, user=None,
+                   detach=False, stdin_open=False, tty=False, mem_limit=0,
+                   ports=None, environment=None, dns=None, volumes=None,
+                   volumes_from=None, network_disabled=False, name=None,
+                   entrypoint=None, cpu_shares=None, working_dir=None,
+                   memswap_limit=0)

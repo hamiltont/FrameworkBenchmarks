@@ -39,6 +39,9 @@ sudo apt-get -y install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::=
   libjson0-dev libmcrypt-dev libicu-dev gettext \
   libpq-dev mlton cloc dstat
 
+sudo apt-get -y install python-pip
+sudo pip install docker-py
+
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
 sudo apt-get -y update
 sudo apt-get install -y gcc-4.8 g++-4.8
