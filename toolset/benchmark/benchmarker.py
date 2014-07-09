@@ -112,6 +112,9 @@ class Benchmarker:
     ##########################    
     all_tests = self.__gather_tests
 
+    if self.docker or self.docker_client: 
+      return self._run_docker(all_tests)
+
     ##########################
     # Setup client/server
     ##########################
@@ -133,7 +136,7 @@ class Benchmarker:
     ##########################
     # Parse results
     ##########################  
-    if self.mode == "benchmark":
+    if self.mode == "benchmark" and not self.docker_client:
       print header("Parsing Results ...", top='=', bottom='=')
       self.__parse_results(all_tests)
 
@@ -143,6 +146,30 @@ class Benchmarker:
   ############################################################
   # End run
   ############################################################
+
+  # Called for both --docker and --docker-client
+  def _run_docker(self, all_tests):
+    in_container = self.docker_client
+    
+    if not in_container: 
+      print textwrap.dedent("""
+      =====================================================
+        Preparing Server, Database, and Client ...
+      =====================================================
+      """)
+      self.__setup_server()
+      self.__setup_database()
+      self.__setup_client()
+    else:
+      self.__setup_server()
+
+    if not in_container: 
+      print textwrap.dedent("""
+      =====================================================
+        Running Tests ...
+      =====================================================
+      """)
+    self.__run_tests(all_tests)
 
   ############################################################
   # database_sftp_string(batch_file)
@@ -444,10 +471,14 @@ class Benchmarker:
         pbar.update(pbar_test)
         pbar_test = pbar_test + 1
         if __name__ == 'benchmark.benchmarker':
-          print header("Running Test: %s" % test.name)
-          with open('current_benchmark.txt', 'w') as benchmark_resume_file:
-            benchmark_resume_file.write(test.name)
-          test_process = Process(target=self.__run_test, name="Test Runner (%s)" % test.name, args=(test,))
+          if self.docker: 
+            test_process = Process(target=self.__run_test_in_container, args=(test,))
+          else: 
+            print header("Running Test: %s" % test.name)
+            with open('current_benchmark.txt', 'w') as benchmark_resume_file:
+              benchmark_resume_file.write(test.name)
+            test_process = Process(target=self.__run_test, name="Test Runner (%s)" % test.name, args=(test,))
+            
           test_process.start()
           test_process.join(self.run_test_timeout_seconds)
           self.__load_results()  # Load intermediate result from child process
@@ -470,6 +501,122 @@ class Benchmarker:
   # End __run_tests
   ############################################################
 
+  def __run_test_in_container(self, test):
+    user = subprocess.check_output("printf $USER", shell=True)
+    repo="%s/fwbm-%s" % (user, test.name)
+    if not setup_util.exists(repo):
+      print "DOCKER: Unable to run %s, image %s does not exist" % (test.name, repo)
+      return
+
+    # Build run command
+    command="toolset/run-tests.py --test %s --docker-client" % test.name
+    if self.mode:
+      command="%s --mode %s" % (command, self.mode)
+    if self.name:
+      command="%s --name %s" % (command, self.name)
+    if self.type:
+      command="%s --type %s" % (command, self.type)
+    if self.duration:
+      command="%s --duration %s" % (command, self.duration)
+    if self.server_host:
+      command="%s --server-host %s" % (command, self.server_host)
+    if self.client_host:
+      command="%s --client-host %s" % (command, self.client_host)
+    if self.database_host:
+      command="%s --database-host %s" % (command, self.database_host)
+    if self.client_user:
+      command="%s --client-user %s" % (command, self.client_user)
+    if self.database_user:
+      command="%s --database-user %s" % (command, self.database_user)
+
+    # Handle SSH identity files
+    if self.client_identity_file: 
+      # Allows multiple path types e.g. foo, ../foo, ~/foo
+      ci=os.path.abspath(os.path.expanduser(self.client_identity_file))
+      ci_path = os.path.dirname(ci)
+      ci_file = os.path.basename(ci)
+      if ci_path == os.path.expanduser("~/.ssh"):
+        command="%s --client-identity-file /root/.ssh/%s" % (command, ci_file)
+        ci_mount = None
+      else:
+        # Bind mount, then copy so we can chown
+        # TODO I hate this. You could accidentally share your keys wiht the world via a push
+        # if you try and save this container
+        command="%s --client-identity-file /tmp/sshclient/%s" % (command, ci_file)
+        ci_mount = {ci_path: {'bind': '/tmp/zz_sshclient'}}
+        command="cp -R /tmp/zz_sshclient /tmp/sshclient && chown -R root:root /tmp/sshclient && %s" % command  
+    if self.database_identity_file:
+      di=os.path.abspath(os.path.expanduser(self.database_identity_file))
+      di_path = os.path.dirname(di)
+      di_file = os.path.basename(di)
+      if di_path == os.path.expanduser("~/.ssh"):
+        command="%s --database-identity-file /root/.ssh/%s" % (command, di_file)    
+        di_mount = None
+      else:
+        # TODO I hate this so much I'm leaving two comments
+        command="%s --database-identity-file /tmp/sshdb/%s" % (command, di_file)    
+        di_mount = {di_path: {'bind': '/tmp/zz_sshdb'}}
+        command="cp -R /tmp/zz_sshdb /tmp/sshdb && chown -R root:root /tmp/sshdb && %s" % command  
+
+    c = setup_util.get_client()
+    # Create container to run this test
+    #
+    #   - base on installation container
+    #   - command is benchmark command
+    #   - mount toolset directory in case you're a developer making changes
+    #   - mount results directory to use in container
+    #   - mount ~/.ssh in case they have a config file with keys defined
+    #     TODO: check what happens if .ssh doesn't exist
+    #   - mount folders for identity file locations
+    # TODO add host/type/mode/max-*/test-dir
+
+    # Bind mount ssh, then copy so we can chown it
+    ssh_volume="/tmp/zz_ssh" 
+    command="cp -R /tmp/zz_ssh /root/.ssh && chown -R root:root /root/.ssh && %s" % command  
+    toolvolume="/root/FrameworkBenchmarks/toolset"
+    reslvolume="/root/FrameworkBenchmarks/results"
+
+    # docker-py can only run one command (e.g. no &&), so we 
+    # run bash as our one and pass it the command we really want
+    command="bash -c \"%s\"" % command
+    install_container = c.create_container(repo, command=command,
+      volumes=[toolvolume, reslvolume, ssh_volume])
+    cid = install_container['Id']
+
+    # Run the test
+    print "DOCKER: Preparing to run %s in container %s" % (test.name, cid)
+    
+    tool_dir = "%s/toolset" % self.fwroot
+    resl_dir = "%s/results" % self.fwroot
+    ssh__dir = os.path.expanduser("~/.ssh")
+    mounts={
+      resl_dir: { 'bind': reslvolume}, 
+      tool_dir: { 'bind': toolvolume},
+      ssh__dir: { 'bind': ssh_volume}
+      }
+    if ci_mount: 
+      mounts.update(ci_mount)
+    if di_mount: 
+      mounts.update(di_mount)
+
+    vols = ""
+    for host_path in mounts.keys():
+      vols="%s -v %s:%s" % (vols, host_path, mounts[host_path]['bind'])
+
+    print "DOCKER: Running this monstrosity: sudo docker run --net='host' -i -t %s %s /bin/sh -c '%s'" % (vols, repo, command)
+    c.start(cid, binds=mounts, network_mode='host')
+
+    # Fetch container output while we are running
+    while setup_util.is_running(cid):
+      output = c.attach(cid, stream=True)
+      for line in output:
+        sys.stdout.write("%s: %s" % (repo, line))
+      time.sleep(100.0 / 1000.0) # Sleep 100ms
+
+    # Check container exit code
+    exit = c.wait(cid)
+    if exit != 0: 
+      print "DOCKER: Non-zero exit when running %s in %s" % (test.name, cid)
   ############################################################
   # __run_test
   # 2013-10-02 ASB  Previously __run_tests.  This code now only

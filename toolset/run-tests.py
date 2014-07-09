@@ -109,6 +109,7 @@ def main(argv=None):
         With pertest each test gets its own installs directory, but installation takes longer''')
     parser.add_argument('--install-only', action='store_true', default=False, help='Do not run benchmark or verification, just install and exit')
     parser.add_argument('--docker', action='store_true', default=False, help='installs server software inside docker container')
+    parser.add_argument('--docker-client', action='store_true', default=False, help='Internal Use Only, do not pass. Indicates we are running inside a docker container')
     parser.add_argument('--install-only', action='store_true', default=False, help='Do not run any tests, only perform installation')
 
     # Test options
