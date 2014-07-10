@@ -949,104 +949,101 @@ class FrameworkTest:
   # __parse_test(test_type)
   ############################################################
   def __parse_test(self, test_type):
-    try:
-      results = dict()
-      results['results'] = []
-      stats = []
-      
-      if os.path.exists(self.benchmarker.get_output_file(self.name, test_type)):
-        with open(self.benchmarker.output_file(self.name, test_type)) as raw_data:
-          is_warmup = True
-          rawData = None
-          for line in raw_data:
+    results = dict()
+    results['results'] = []
+    stats = []
+    
+    if os.path.exists(self.benchmarker.get_output_file(self.name, test_type)):
+      with open(self.benchmarker.output_file(self.name, test_type)) as raw_data:
+        is_warmup = True
+        rawData = None
+        for line in raw_data:
 
-            if "Queries:" in line or "Concurrency:" in line:
-              is_warmup = False
-              rawData = None
-              continue
-            if "Warmup" in line or "Primer" in line:
-              is_warmup = True
-              continue
+          if "Queries:" in line or "Concurrency:" in line:
+            is_warmup = False
+            rawData = None
+            continue
+          if "Warmup" in line or "Primer" in line:
+            is_warmup = True
+            continue
 
-            if not is_warmup:
-              if rawData == None:
-                rawData = dict()
-                results['results'].append(rawData)
+          if not is_warmup:
+            if rawData == None:
+              rawData = dict()
+              results['results'].append(rawData)
 
-              #if "Requests/sec:" in line:
-              #  m = re.search("Requests/sec:\s+([0-9]+)", line)
-              #  rawData['reportedResults'] = m.group(1)
-                
-              # search for weighttp data such as succeeded and failed.
-              if "Latency" in line:
-                m = re.findall("([0-9]+\.*[0-9]*[us|ms|s|m|%]+)", line)
-                if len(m) == 4:
-                  rawData['latencyAvg'] = m[0]
-                  rawData['latencyStdev'] = m[1]
-                  rawData['latencyMax'] = m[2]
-              #    rawData['latencyStdevPercent'] = m[3]
+            #if "Requests/sec:" in line:
+            #  m = re.search("Requests/sec:\s+([0-9]+)", line)
+            #  rawData['reportedResults'] = m.group(1)
               
-              #if "Req/Sec" in line:
-              #  m = re.findall("([0-9]+\.*[0-9]*[k|%]*)", line)
-              #  if len(m) == 4:
-              #    rawData['requestsAvg'] = m[0]
-              #    rawData['requestsStdev'] = m[1]
-              #    rawData['requestsMax'] = m[2]
-              #    rawData['requestsStdevPercent'] = m[3]
-                
-              #if "requests in" in line:
-              #  m = re.search("requests in ([0-9]+\.*[0-9]*[ms|s|m|h]+)", line)
-              #  if m != None: 
-              #    # parse out the raw time, which may be in minutes or seconds
-              #    raw_time = m.group(1)
-              #    if "ms" in raw_time:
-              #      rawData['total_time'] = float(raw_time[:len(raw_time)-2]) / 1000.0
-              #    elif "s" in raw_time:
-              #      rawData['total_time'] = float(raw_time[:len(raw_time)-1])
-              #    elif "m" in raw_time:
-              #      rawData['total_time'] = float(raw_time[:len(raw_time)-1]) * 60.0
-              #    elif "h" in raw_time:
-              #      rawData['total_time'] = float(raw_time[:len(raw_time)-1]) * 3600.0
-             
-              if "requests in" in line:
-                m = re.search("([0-9]+) requests in", line)
-                if m != None: 
-                  rawData['totalRequests'] = int(m.group(1))
+            # search for weighttp data such as succeeded and failed.
+            if "Latency" in line:
+              m = re.findall("([0-9]+\.*[0-9]*[us|ms|s|m|%]+)", line)
+              if len(m) == 4:
+                rawData['latencyAvg'] = m[0]
+                rawData['latencyStdev'] = m[1]
+                rawData['latencyMax'] = m[2]
+            #    rawData['latencyStdevPercent'] = m[3]
+            
+            #if "Req/Sec" in line:
+            #  m = re.findall("([0-9]+\.*[0-9]*[k|%]*)", line)
+            #  if len(m) == 4:
+            #    rawData['requestsAvg'] = m[0]
+            #    rawData['requestsStdev'] = m[1]
+            #    rawData['requestsMax'] = m[2]
+            #    rawData['requestsStdevPercent'] = m[3]
               
-              if "Socket errors" in line:
-                if "connect" in line:
-                  m = re.search("connect ([0-9]+)", line)
-                  rawData['connect'] = int(m.group(1))
-                if "read" in line:
-                  m = re.search("read ([0-9]+)", line)
-                  rawData['read'] = int(m.group(1))
-                if "write" in line:
-                  m = re.search("write ([0-9]+)", line)
-                  rawData['write'] = int(m.group(1))
-                if "timeout" in line:
-                  m = re.search("timeout ([0-9]+)", line)
-                  rawData['timeout'] = int(m.group(1))
-              
-              if "Non-2xx" in line:
-                m = re.search("Non-2xx or 3xx responses: ([0-9]+)", line)
-                if m != None: 
-                  rawData['5xx'] = int(m.group(1))
-              if "STARTTIME" in line:
-                m = re.search("[0-9]+", line)
-                rawData["startTime"] = int(m.group(0))
-              if "ENDTIME" in line:
-                m = re.search("[0-9]+", line)
-                rawData["endTime"] = int(m.group(0))
-                test_stats = self.__parse_stats(test_type, rawData["startTime"], rawData["endTime"], 1)
-                # rawData["averageStats"] = self.__calculate_average_stats(test_stats)
-                stats.append(test_stats)
-      with open(self.benchmarker.stats_file(self.name, test_type) + ".json", "w") as stats_file:
-        json.dump(stats, stats_file)
+            #if "requests in" in line:
+            #  m = re.search("requests in ([0-9]+\.*[0-9]*[ms|s|m|h]+)", line)
+            #  if m != None: 
+            #    # parse out the raw time, which may be in minutes or seconds
+            #    raw_time = m.group(1)
+            #    if "ms" in raw_time:
+            #      rawData['total_time'] = float(raw_time[:len(raw_time)-2]) / 1000.0
+            #    elif "s" in raw_time:
+            #      rawData['total_time'] = float(raw_time[:len(raw_time)-1])
+            #    elif "m" in raw_time:
+            #      rawData['total_time'] = float(raw_time[:len(raw_time)-1]) * 60.0
+            #    elif "h" in raw_time:
+            #      rawData['total_time'] = float(raw_time[:len(raw_time)-1]) * 3600.0
+           
+            if "requests in" in line:
+              m = re.search("([0-9]+) requests in", line)
+              if m != None: 
+                rawData['totalRequests'] = int(m.group(1))
+            
+            if "Socket errors" in line:
+              if "connect" in line:
+                m = re.search("connect ([0-9]+)", line)
+                rawData['connect'] = int(m.group(1))
+              if "read" in line:
+                m = re.search("read ([0-9]+)", line)
+                rawData['read'] = int(m.group(1))
+              if "write" in line:
+                m = re.search("write ([0-9]+)", line)
+                rawData['write'] = int(m.group(1))
+              if "timeout" in line:
+                m = re.search("timeout ([0-9]+)", line)
+                rawData['timeout'] = int(m.group(1))
+            
+            if "Non-2xx" in line:
+              m = re.search("Non-2xx or 3xx responses: ([0-9]+)", line)
+              if m != None: 
+                rawData['5xx'] = int(m.group(1))
+            if "STARTTIME" in line:
+              m = re.search("[0-9]+", line)
+              rawData["startTime"] = int(m.group(0))
+            if "ENDTIME" in line:
+              m = re.search("[0-9]+", line)
+              rawData["endTime"] = int(m.group(0))
+              test_stats = self.__parse_stats(test_type, rawData["startTime"], rawData["endTime"], 1)
+              # rawData["averageStats"] = self.__calculate_average_stats(test_stats)
+              stats.append(test_stats)
+    with open(self.benchmarker.stats_file(self.name, test_type) + ".json", "w") as stats_file:
+      json.dump(stats, stats_file)
 
 
-      return results
-    except IOError:
-      return None
+    return results
   ############################################################
   # End benchmark
   ############################################################
