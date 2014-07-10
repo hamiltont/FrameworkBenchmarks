@@ -668,9 +668,9 @@ class Benchmarker:
       out.write("self.results['frameworks'] != None: {val}\n".format(val=str(self.results['frameworks'] != None)))
       out.write("test.name: {name}\n".format(name=str(test.name)))
       out.write("self.results['completed']: {completed}\n".format(completed=str(self.results['completed'])))
-      if self.results['frameworks'] != None and test.name in self.results['completed']:
-        out.write('Framework {name} found in latest saved data. Skipping.\n'.format(name=str(test.name)))
-        return exit_with_code(1)
+      #if self.results['frameworks'] != None and test.name in self.results['completed']:
+      #  out.write('Framework {name} found in latest saved data. Skipping.\n'.format(name=str(test.name)))
+      #  return exit_with_code(1)
       out.flush()
 
       out.write(header("Beginning %s" % test.name, top='='))
