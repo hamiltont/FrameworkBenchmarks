@@ -117,8 +117,8 @@ def main(argv=None):
     parser.add_argument('--exclude', nargs='+', help='names of tests to exclude')
     parser.add_argument('--type', choices=['all', 'json', 'db', 'query', 'fortune', 'update', 'plaintext'], default='all', help='which type of test to run')
     parser.add_argument('-m', '--mode', choices=['benchmark', 'verify'], default='benchmark', help='verify mode will only start up the tests, curl the urls and shutdown')
-    parser.add_argument('--list-tests', action='store_true', default=False, help='lists all the known tests that can run')
-    parser.add_argument('--list-test-metadata', action='store_true', default=False, help='writes all the test metadata as a JSON file in the results directory')
+    parser.add_argument('--list-tests', action='store_true', default=False, help='lists all the known tests that can run. Does not run benchmark')
+    parser.add_argument('--list-test-metadata', action='store_true', default=False, help='writes all the test metadata as a JSON file in the results directory. Does not run benchmark')
     parser.add_argument('--name', default="ec2", help='The name to give this test. Results will be placed in a folder using this name.')
     parser.add_argument('--os', choices=['linux', 'windows'], default='linux', help='The operating system of the application/framework server (the one running' +
                         'this binary')
@@ -130,11 +130,11 @@ def main(argv=None):
     parser.add_argument('--query-interval', default=5, type=int, help='Query tests will go from 1 query to max queries in increments of interval queries')
     parser.add_argument('--max-threads', default=maxThreads, help='The max number of threads to run wrk at. This should be set to the number of cores for your client system.', type=int)
     parser.add_argument('--duration', default=15, help='Time in seconds that each test should run for.')
-    parser.add_argument('--starting-concurrency', default=8, type=int)
+    parser.add_argument('--starting-concurrency', default=8, type=int, help='the initial number of HTTP connections that wrk will keep open')
     parser.add_argument('--sleep', type=int, default=60, help='the amount of time to sleep after starting each test to allow the server to start up.')
 
     # Misc Options
-    parser.add_argument('--parse', help='Parses the results of the given timestamp and merges that with the latest results')
+    parser.add_argument('--parse', help='Parses the results of the given timestamp and merges that with the latest results. Does not run benchmark')
     parser.add_argument('--time', help='Use the given timestamp to store the results, overwriting if any prior data is encountered. Does run benchmark')
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Causes the configuration to print before any other commands are executed.')
     parser.set_defaults(**defaults) # Must do this after add, or each option's default will override the configuration file default
