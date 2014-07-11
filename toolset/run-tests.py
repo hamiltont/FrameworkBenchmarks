@@ -135,6 +135,7 @@ def main(argv=None):
 
     # Misc Options
     parser.add_argument('--parse', help='Parses the results of the given timestamp and merges that with the latest results')
+    parser.add_argument('--time', help='Use the given timestamp to store the results, overwriting if any prior data is encountered. Does run benchmark')
     parser.add_argument('-v', '--verbose', action='store_true', default=False, help='Causes the configuration to print before any other commands are executed.')
     parser.set_defaults(**defaults) # Must do this after add, or each option's default will override the configuration file default
     args = parser.parse_args(remaining_argv)

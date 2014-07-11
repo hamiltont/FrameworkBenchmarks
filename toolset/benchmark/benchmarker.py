@@ -509,7 +509,8 @@ class Benchmarker:
       return
 
     # Build run command
-    command="toolset/run-tests.py --test %s --docker-client" % test.name
+    command="toolset/run-tests.py --test %s --docker-client --verbose" % test.name
+    command="%s --time %s" % (command, self.timestamp) # We only want one directory for results
     if self.mode:
       command="%s --mode %s" % (command, self.mode)
     if self.name:
@@ -1013,6 +1014,8 @@ class Benchmarker:
   
     if self.parse != None:
       self.timestamp = self.parse
+    elif self.time != None:
+      self.timestamp = self.time
     else:
       self.timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
 
