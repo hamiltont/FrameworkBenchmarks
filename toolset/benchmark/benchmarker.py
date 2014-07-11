@@ -136,7 +136,7 @@ class Benchmarker:
     ##########################
     # Parse results
     ##########################  
-    if self.mode == "benchmark" and not self.docker_client:
+    if self.mode == "benchmark":
       print header("Parsing Results ...", top='=', bottom='=')
       self.__parse_results(all_tests)
 
@@ -163,13 +163,27 @@ class Benchmarker:
     else:
       self.__setup_server()
 
-    if not in_container: 
+    # No need to print the same message twice
+    if not in_container:
       print textwrap.dedent("""
       =====================================================
         Running Tests ...
       =====================================================
       """)
     self.__run_tests(all_tests)
+
+    ##########################
+    # Parse results
+    ##########################  
+    if self.mode == "benchmark" and not self.docker_client:
+      print textwrap.dedent("""
+      =====================================================
+        Parsing Results ...
+      =====================================================
+      """)
+      self.__parse_results(all_tests)
+
+    self.__finish()
 
   ############################################################
   # database_sftp_string(batch_file)
