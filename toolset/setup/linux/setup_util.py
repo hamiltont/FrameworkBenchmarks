@@ -123,7 +123,7 @@ def print_json_stream(string):
     line=json.loads(string)
     if 'stream' in line.keys():
         for unique_line in line['stream'].strip().split('\n'):
-            print "DOCKER: %s" % unique_line
+            print "DOCKER: %s" % unique_line.strip()
     if 'error' in line.keys():
         print "DOCKER:   %s" % line['error'].strip()
 
@@ -134,6 +134,8 @@ def is_running(container_id):
             return True
     return False
 
+# Checks if you are currently inside a docker container
+# safe to call even if you have not done 'import docker'
 def inside_container():
     # Using http://stackoverflow.com/a/23558932/119592
     try:

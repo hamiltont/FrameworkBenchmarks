@@ -770,10 +770,6 @@ class FrameworkTest:
         out.flush()
         results = None
         output_file = self.benchmarker.output_file(self.name, self.JSON)
-        if not os.path.exists(output_file):
-          with open(output_file, 'w'):
-            # Simply opening the file in write mode should create the empty file.
-            pass
         if self.json_url_passed:
           remote_script = self.__generate_concurrency_script(self.json_url, self.port, self.accept_json)
           self.__begin_logging(self.JSON)

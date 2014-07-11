@@ -183,7 +183,8 @@ class Benchmarker:
       """)
       self.__parse_results(all_tests)
 
-    self.__finish()
+    if not self.docker_client: 
+      self.__finish()
 
   ############################################################
   # database_sftp_string(batch_file)
@@ -495,6 +496,11 @@ class Benchmarker:
         if __name__ == 'benchmark.benchmarker':
           if self.docker: 
             test_process = Process(target=self.__run_test_in_container, args=(test,))
+            print textwrap.dedent("""
+            -----------------------------------------------------
+              Running Test Container For: {name} ...
+            -----------------------------------------------------
+            """.format(name=test.name))
           else: 
             print header("Running Test: %s" % test.name)
             with open('current_benchmark.txt', 'w') as benchmark_resume_file:
@@ -541,6 +547,18 @@ class Benchmarker:
       command="%s --type %s" % (command, self.type)
     if self.duration:
       command="%s --duration %s" % (command, self.duration)
+    if self.sleep:
+      command="%s --sleep %s" % (command, self.sleep)
+    if self.starting_concurrency:
+      command="%s --starting-concurrency %s" % (command, self.starting_concurrency)
+    if self.max_concurrency:
+      command="%s --max-concurrency %s" % (command, self.max_concurrency)
+    if self.max_threads:
+      command="%s --max-threads %s" % (command, self.max_threads)
+    if self.query_interval:
+      command="%s --query-interval %s" % (command, self.query_interval)
+    if self.max_queries:
+      command="%s --max-queries %s" % (command, self.max_queries)
     if self.server_host:
       command="%s --server-host %s" % (command, self.server_host)
     if self.client_host:
@@ -591,7 +609,6 @@ class Benchmarker:
     #   - mount ~/.ssh in case they have a config file with keys defined
     #     TODO: check what happens if .ssh doesn't exist
     #   - mount folders for identity file locations
-    # TODO add host/type/mode/max-*/test-dir
 
     # Bind mount ssh, then copy so we can chown it
     ssh_volume="/tmp/zz_ssh" 
@@ -632,8 +649,13 @@ class Benchmarker:
     # Fetch container output while we are running
     while setup_util.is_running(cid):
       output = c.attach(cid, stream=True)
+      last_had_newline = True
       for line in output:
-        sys.stdout.write("%s: %s" % (repo, line))
+        if last_had_newline: 
+          sys.stdout.write("%s: %s" % (repo, line))
+        else:
+          sys.stdout.write(line)
+        last_had_newline = line.endswith("\n")
       time.sleep(100.0 / 1000.0) # Sleep 100ms
 
     # Check container exit code
