@@ -14,6 +14,7 @@ import pprint
 import csv
 import sys
 import logging
+log = logging.getLogger('benchmarker')
 import socket
 from multiprocessing import Process
 from datetime import datetime
@@ -81,6 +82,7 @@ class Benchmarker:
   # Re-parses the raw data for a given timestamp
   ############################################################
   def parse_timestamp(self):
+    log.info("parse_timestamp")
     all_tests = self.__gather_tests
 
     for test in all_tests:
@@ -102,6 +104,8 @@ class Benchmarker:
   # running benchmarks against them.
   ############################################################
   def run(self):
+    log.info("run")
+
     ##########################
     # Get a list of all known
     # tests that we can run.
@@ -188,6 +192,7 @@ class Benchmarker:
   # test_type timestamp/test_type/test_name/raw 
   ############################################################
   def get_output_file(self, test_name, test_type):
+    log.debug("get_output_file")
     return os.path.join(self.result_directory, self.timestamp, test_type, test_name, "raw")
   ############################################################
   # End get_output_file
@@ -199,6 +204,7 @@ class Benchmarker:
   # timestamp/test_type/test_name/raw 
   ############################################################
   def output_file(self, test_name, test_type):
+    log.debug("output_file")
     path = self.get_output_file(test_name, test_type)
     try:
       os.makedirs(os.path.dirname(path))
@@ -243,6 +249,7 @@ class Benchmarker:
   # full_results_directory
   ############################################################
   def full_results_directory(self):
+    log.debug("full_results_directory")
     path = os.path.join(self.result_directory, self.timestamp)
     try:
       os.makedirs(path)
@@ -258,6 +265,7 @@ class Benchmarker:
   ############################################################
 
   def latest_results_directory(self):
+    log.debug("latest_results_directory")
     path = os.path.join(self.result_directory,"latest")
     try:
       os.makedirs(path)
@@ -285,6 +293,9 @@ class Benchmarker:
   # the parent process' memory from the child process
   ############################################################
   def report_benchmark_results(self, framework, test, results):
+    log.info("report_results: %s - %s" % (framework.name, test))
+    log.debug("report_results: %s" % results)
+
     if test not in self.results['rawData'].keys():
       self.results['rawData'][test] = dict()
 
@@ -313,6 +324,7 @@ class Benchmarker:
   ############################################################
   @property
   def __gather_tests(self):
+    log.info("__gather_tests")
     tests = gather_tests(include=self.test, 
       exclude=self.exclude,
       benchmarker=self)
@@ -326,6 +338,7 @@ class Benchmarker:
                 if atest.name == interrupt_bench:
                     tests = tests[index:]
                     break
+
     return tests
   ############################################################
   # End __gather_tests
@@ -335,6 +348,8 @@ class Benchmarker:
   # Gathers all the frameworks
   ############################################################
   def __gather_frameworks(self):
+    log.info("__gather_frameworks")
+
     frameworks = []
     # Loop through each directory (we assume we're being run from the benchmarking root)
     for dirname, dirnames, filenames in os.walk('.'):
@@ -378,6 +393,7 @@ class Benchmarker:
   # http://redmine.lighttpd.net/projects/weighttp/wiki#Troubleshooting
   ############################################################
   def __setup_server(self):
+    log.info("__setup_server")
     try:
       if os.name == 'nt':
         return True
@@ -402,6 +418,7 @@ class Benchmarker:
   # changes.
   ############################################################
   def __setup_database(self):
+    log.info("__setup_database")
     p = subprocess.Popen(self.database_ssh_string, stdin=subprocess.PIPE, shell=True)
     p.communicate("""
       sudo sysctl -w net.ipv4.tcp_max_syn_backlog=65535
@@ -423,6 +440,7 @@ class Benchmarker:
   # changes.
   ############################################################
   def __setup_client(self):
+    log.info("__setup_client")
     p = subprocess.Popen(self.client_ssh_string, stdin=subprocess.PIPE, shell=True)
     p.communicate("""
       sudo sysctl -w net.ipv4.tcp_max_syn_backlog=65535
@@ -449,22 +467,21 @@ class Benchmarker:
   ############################################################
 
   def __run_tests(self, tests):
+    log.info("__run_tests")
+    log.debug("__run_tests with __name__ = %s",__name__)
     if len(tests) == 0:
       return 0
 
-    logging.debug("Start __run_tests.")
-    logging.debug("__name__ = %s",__name__)
-
     error_happened = False
     if self.os.lower() == 'windows':
-      logging.debug("Executing __run_tests on Windows")
+      log.info("Executing __run_tests on Windows")
       for test in tests:
         with open('current_benchmark.txt', 'w') as benchmark_resume_file:
           benchmark_resume_file.write(test.name)
         if self.__run_test(test) != 0:
           error_happened = True
     else:
-      logging.debug("Executing __run_tests on Linux")
+      log.info("Executing __run_tests on Linux")
 
       # Setup a nice progressbar and ETA indicator
       widgets = [self.mode, ': ',  progressbar.Percentage(), 
@@ -486,7 +503,7 @@ class Benchmarker:
           test_process.join(self.run_test_timeout_seconds)
           self.__load_results()  # Load intermediate result from child process
           if(test_process.is_alive()):
-            logging.debug("Child process for {name} is still alive. Terminating.".format(name=test.name))
+            log.warn("Child process for {name} is still alive. Terminating.".format(name=test.name))
             self.__write_intermediate_results(test.name,"__run_test timeout (="+ str(self.run_test_timeout_seconds) + " seconds)")
             test_process.terminate()
             test_process.join()
@@ -495,7 +512,7 @@ class Benchmarker:
       pbar.finish()
     if os.path.isfile('current_benchmark.txt'):
       os.remove('current_benchmark.txt')
-    logging.debug("End __run_tests.")
+    log.debug("End __run_tests.")
 
     if error_happened:
       return 1
@@ -515,7 +532,7 @@ class Benchmarker:
   # are needed.
   ############################################################
   def __run_test(self, test):
-    
+    log.info("__run_test")
     # Used to capture return values 
     def exit_with_code(code):
       if self.os.lower() == 'windows':
@@ -722,6 +739,8 @@ class Benchmarker:
   # are needed.
   ############################################################
   def __parse_results(self, tests):
+    log.info("__parse_results")
+    
     # Run the method to get the commmit count of each framework.
     self.__count_commits()
    # Call the method which counts the sloc for each framework
@@ -729,7 +748,10 @@ class Benchmarker:
 
     # Time to create parsed files
     # Aggregate JSON file
-    with open(os.path.join(self.full_results_directory(), "results.json"), "w") as f:
+    results_file=os.path.join(self.full_results_directory(), "results.json")
+    log.debug("Writing results to %s"%results_file)
+    log.debug("Results: %s" % json.dumps(self.results))
+    with open(results_file, "w") as f:
       f.write(json.dumps(self.results))
 
   ############################################################
@@ -742,6 +764,7 @@ class Benchmarker:
   # This is assumed to be run from the benchmark root directory
   #############################################################
   def __count_sloc(self):
+    log.info("__count_sloc")
     all_frameworks = self.__gather_frameworks()
     jsonResult = {}
 
@@ -767,6 +790,7 @@ class Benchmarker:
   # __count_commits
   ############################################################
   def __count_commits(self):
+    log.info("__count_commits")
     all_frameworks = self.__gather_frameworks()
 
     jsonResult = {}
@@ -789,12 +813,15 @@ class Benchmarker:
   # __write_intermediate_results
   ############################################################
   def __write_intermediate_results(self,test_name,status_message):
+    log.info("__write_intermediate_results: %s reports %s" % (test_name, status_message))
     try:
       self.results["completed"][test_name] = status_message
-      with open(os.path.join(self.latest_results_directory, 'results.json'), 'w') as f:
+      latest_results = os.path.join(self.latest_results_directory, 'results.json')
+      log.debug("Dumping to %s: %s" % (latest_results, json.dumps(self.results)))
+      with open(latest_results, 'w') as f:
         f.write(json.dumps(self.results))
     except (IOError):
-      logging.error("Error writing results.json")
+      log.error("Error writing results.json")
 
   ############################################################
   # End __write_intermediate_results
@@ -811,6 +838,7 @@ class Benchmarker:
   # __finish
   ############################################################
   def __finish(self):
+    log.info("__finish")
     tests = self.__gather_tests
     # Normally you don't have to use Fore.BLUE before each line, but 
     # Travis-CI seems to reset color codes on newline (see travis-ci/travis-ci#2692)
@@ -853,9 +881,6 @@ class Benchmarker:
     self.__dict__.update(args)
     self.start_time = time.time()
     self.run_test_timeout_seconds = 3600
-
-    # setup logging
-    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
     
     # setup some additional variables
     if self.database_user == None: self.database_user = self.client_user
@@ -919,7 +944,7 @@ class Benchmarker:
         #Load json file into results object
         self.results = json.load(f)
     except IOError:
-      logging.warn("results.json for test %s not found.",self.name) 
+      log.warn("results.json for test %s not found.",self.name) 
     
     if self.results == None:
       self.results = dict()

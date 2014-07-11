@@ -18,6 +18,7 @@ from threading import Thread
 from threading import Event
 
 from utils import header
+log = logging.getLogger('framework_test')
 
 class FrameworkTest:
   ##########################################################################################
@@ -442,10 +443,11 @@ class FrameworkTest:
   # Start the test using it's setup file
   ############################################################
   def start(self, out, err):
+    log.info("start")
     # Load profile for this installation
     profile="%s/bash_profile.sh" % self.directory
     if not os.path.exists(profile):
-      logging.warning("Directory %s does not have a bash_profile.sh" % self.directory)
+      log.warning("Framework %s does not have a bash_profile" % self.name)
       profile="$FWROOT/config/benchmark_profile"
 
     # Setup variables for TROOT and IROOT
@@ -491,6 +493,8 @@ class FrameworkTest:
   # Stops the test using it's setup file
   ############################################################
   def stop(self, out, err):
+    log.info("stop")
+
     # Load profile for this installation
     profile="%s/bash_profile.sh" % self.directory
     if not os.path.exists(profile):
@@ -891,6 +895,7 @@ class FrameworkTest:
   # Method meant to be run for a given timestamp
   ############################################################
   def parse_all(self):
+    log.info("parse_all")
     # JSON
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.JSON)):
       results = self.__parse_test(self.JSON)
@@ -928,6 +933,7 @@ class FrameworkTest:
   # __parse_test(test_type)
   ############################################################
   def __parse_test(self, test_type):
+    log.info("__parse_test") 
     try:
       results = dict()
       results['results'] = []
@@ -1290,18 +1296,17 @@ class FrameworkTest:
   # Constructor
   ##########################################################################################  
   def __init__(self, name, directory, benchmarker, runTests, args):
+    log.debug("__init__: %s in %s" % (name, directory))
     self.name = name
     self.directory = directory
     self.benchmarker = benchmarker
     self.runTests = runTests
     self.fwroot = benchmarker.fwroot
     
-    # setup logging
-    logging.basicConfig(stream=sys.stderr, level=logging.INFO)
-    
     self.install_root="%s/%s" % (self.fwroot, "installs")
     if benchmarker.install_strategy is 'pertest':
       self.install_root="%s/pertest/%s" % (self.install_root, name)
+    log.debug("Install root: %s"%self.install_root)
 
     # Used in setup.py scripts for consistency with 
     # the bash environment variables
