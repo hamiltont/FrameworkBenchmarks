@@ -521,17 +521,7 @@ class Benchmarker:
     if os.path.isfile('current_benchmark.txt'):
       os.remove('current_benchmark.txt')
 
-
-    # The test results are stored on disk, we nee to load them back 
-    # into our variables
-    # TODO - this only pulls in the result of parsing the RAW data, not 
-    # any other information that's contained within the subprocess' 
-    # results variable. Is there a better way? 
-    if self.docker:
-      test.parse_all()
-
-    logging.debug("End __run_tests.")
-
+    log.info("End __run_tests")
     if error_happened:
       return 1
     return 0
