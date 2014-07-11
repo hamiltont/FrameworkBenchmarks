@@ -617,7 +617,10 @@ class Benchmarker:
     # Check container exit code
     exit = c.wait(cid)
     if exit != 0: 
-      print "DOCKER: Non-zero exit when running %s in %s" % (test.name, cid)
+      print "DOCKER: Non-zero exit when running %s in %s, expect failures\n" % (test.name, cid)
+      print "DOCKER: Storing %s in %s for you to review\n" % (test.name, "rxx-%s" % repo)
+      c.commit(cid, repository="rxx-%s"%repo, tag='latest')
+
   ############################################################
   # __run_test
   # 2013-10-02 ASB  Previously __run_tests.  This code now only
