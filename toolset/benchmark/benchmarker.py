@@ -230,12 +230,20 @@ class Benchmarker:
   # timestamp/test_type/test_name/raw 
   ############################################################
   def output_file(self, test_name, test_type):
-    path = self.get_output_file(test_name, test_type)
+    output_file = self.get_output_file(test_name, test_type)
     try:
-      os.makedirs(os.path.dirname(path))
+      os.makedirs(os.path.dirname(output_file))
     except OSError:
       pass
-    return path
+    
+    # If we are running inside docker, we have to ensure that 
+    # the folder permissions are set to allow non-root users 
+    # to create new files inside of this directory 
+    if self.docker_client:
+      path=os.path.join(self.result_directory, self.timestamp)
+      os.chmod(path, 0777)
+
+    return output_file
   ############################################################
   # End output_file
   ############################################################
@@ -848,6 +856,14 @@ class Benchmarker:
     # Aggregate JSON file
     with open(os.path.join(self.full_results_directory(), "results.json"), "w") as f:
       f.write(json.dumps(self.results, indent=2))
+
+    # If we just accessed results.json from inside docker, 
+    # we need to expand the permissions so that the parent
+    # process will be able to write to results.json once we've
+    # finished
+    if self.docker_client:
+      path = os.path.join(self.full_results_directory(), "results.json")
+      os.chmod(path, 0777)
 
   ############################################################
   # End __parse_results

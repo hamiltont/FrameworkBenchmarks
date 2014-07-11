@@ -915,31 +915,37 @@ class FrameworkTest:
     # JSON
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.JSON)):
       results = self.__parse_test(self.JSON)
+      self.__check_file_permissions(self.JSON)
       self.benchmarker.report_benchmark_results(framework=self, test=self.JSON, results=results['results'])
     
     # DB
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.DB)):
       results = self.__parse_test(self.DB)
+      self.__check_file_permissions(self.DB)
       self.benchmarker.report_benchmark_results(framework=self, test=self.DB, results=results['results'])
     
     # Query
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.QUERY)):
       results = self.__parse_test(self.QUERY)
+      self.__check_file_permissions(self.QUERY)
       self.benchmarker.report_benchmark_results(framework=self, test=self.QUERY, results=results['results'])
 
     # Fortune
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.FORTUNE)):
       results = self.__parse_test(self.FORTUNE)
+      self.__check_file_permissions(self.FORTUNE)
       self.benchmarker.report_benchmark_results(framework=self, test=self.FORTUNE, results=results['results'])
 
     # Update
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.UPDATE)):
       results = self.__parse_test(self.UPDATE)
+      self.__check_file_permissions(self.UPDATE)
       self.benchmarker.report_benchmark_results(framework=self, test=self.UPDATE, results=results['results'])
 
     # Plaintext
     if os.path.exists(self.benchmarker.get_output_file(self.name, self.PLAINTEXT)):
       results = self.__parse_test(self.PLAINTEXT)
+      self.__check_file_permissions(self.PLAINTEXT)
       self.benchmarker.report_benchmark_results(framework=self, test=self.PLAINTEXT, results=results['results'])
   ############################################################
   # End parse_all
@@ -1051,6 +1057,17 @@ class FrameworkTest:
   ##########################################################################################
   # Private Methods
   ##########################################################################################
+
+  def __check_file_permissions(self, test_type):
+    if not self.benchmarker.docker_client:
+      return
+
+    # Any file we touch while running inside a docker container 
+    # becomes owned by the root user. To ensure that the process
+    # which started this container can modify this file as well, 
+    # we have to change the permissions
+    output_file = self.benchmarker.output_file(self.name, test_type)
+    os.chmod(path, 0777)
 
   ############################################################
   # __run_benchmark(script, output_file)
