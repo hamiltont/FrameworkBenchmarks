@@ -551,20 +551,19 @@ class FrameworkTest:
 
     # JSON
     if self.runTests[self.JSON]:
-      out.write(header("VERIFYING JSON (%s)" % self.json_url))
-      out.flush()
+      tout(header("VERIFYING JSON (%s)" % self.json_url), out)
 
       url = self.benchmarker.generate_url(self.json_url, self.port)
       output = self.__curl_url(url, self.JSON, out, err)
-      out.write("VALIDATING JSON ... ")
+      tout("VALIDATING JSON ... ", out)
       ret_tuple = self.validateJson(output, out, err)
       if ret_tuple[0]:
         self.json_url_passed = True
-        out.write("PASS\n\n")
+        tout("PASS\n", out)
         self.benchmarker.report_verify_results(self, self.JSON, 'pass')
       else:
         self.json_url_passed = False
-        out.write("\nFAIL" + ret_tuple[1] + "\n\n")
+        tout("\nFAIL" + ret_tuple[1] + "\n\n", out)
         self.benchmarker.report_verify_results(self, self.JSON, 'fail')
         result = False
       out.flush()
@@ -766,8 +765,7 @@ class FrameworkTest:
     # JSON
     if self.runTests[self.JSON]:
       try:
-        out.write("BENCHMARKING JSON ... ") 
-        out.flush()
+        tout("BENCHMARKING JSON ... ", out) 
         results = None
         output_file = self.benchmarker.output_file(self.name, self.JSON)
         if self.json_url_passed:
@@ -778,8 +776,7 @@ class FrameworkTest:
         results = self.__parse_test(self.JSON)
         print results
         self.benchmarker.report_benchmark_results(framework=self, test=self.JSON, results=results['results'])
-        out.write( "Complete\n" )
-        out.flush()
+        tout( "Complete\n" , out)
       except AttributeError:
         pass
 
@@ -1073,7 +1070,6 @@ class FrameworkTest:
   ############################################################
   def __run_benchmark(self, script, output_file, err):
     with open(output_file, 'w') as raw_file:
-	  
       p = subprocess.Popen(self.benchmarker.client_ssh_string.split(" "), stdin=subprocess.PIPE, stdout=raw_file, stderr=err)
       p.communicate(script)
       err.flush()
@@ -1368,6 +1364,21 @@ class FrameworkTest:
 ##########################################################################################
 # Static methods
 ##########################################################################################
+
+def tout(message, stream):
+  tee(message, out=stream)
+def terr(message, stream):
+  tee(message, err=stream)
+
+def tee(message, out=None, err=None):
+  if out: 
+    sys.stdout.write(message)
+    out.write(message)
+    out.flush()
+  if err:
+    sys.stderr.write(message)
+    err.write(message)
+    err.flush()
 
 ##############################################################
 # parse_config(config, directory, benchmarker)
