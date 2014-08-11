@@ -12,7 +12,7 @@ if [ "$TRAVIS" = "true" ]
   fw_untar perl-5.18.tar.gz -C $FWROOT
   
   cd perl-5.18
-  grep -rl '/localhdd' ./ | xargs sed -i "s|/localhdd|$IROOT|g"
+  grep -rl '/localhdd/installs' ./ | xargs sed -i "s|/localhdd/installs|$IROOT|g"
   echo "looking at cpanm"
   head bin/cpanm
   return 0
