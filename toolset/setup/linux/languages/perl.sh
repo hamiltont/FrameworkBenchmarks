@@ -10,6 +10,11 @@ if [ "$TRAVIS" = "true" ]
   echo Inside Travis-CI, using pre-built Perl installation
   fw_get https://db.tt/XwP474Ng -O perl-5.18.tar.gz
   fw_untar perl-5.18.tar.gz -C $FWROOT
+  
+  cd perl-5.18
+  grep -rl '/localhdd' ./ | xargs sed -i "s|/localhdd|$IROOT|g"
+  echo "looking at cpanm"
+  head bin/cpanm
   return 0
 fi
 
