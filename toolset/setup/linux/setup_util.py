@@ -29,7 +29,7 @@ def replace_environ(config=None, root=None, print_result=False, command='true'):
     
         # Clean up our current environment, preserving some important items
         mini_environ = {}
-        for envname in ['HOME', 'PATH', 'USER', 'LD_LIBRARY_PATH', 'PYTHONPATH', 'FWROOT']:
+        for envname in ['HOME', 'PATH', 'USER', 'LD_LIBRARY_PATH', 'PYTHONPATH', 'FWROOT', 'TRAVIS']:
           if envname in os.environ:
             mini_environ[envname] = os.environ[envname]
         for key in os.environ:
@@ -92,3 +92,4 @@ def get_fwroot():
 def path_relative_to_root(path):
     # Requires bash shell parameter expansion
     return subprocess.check_output("D=%s && printf \"${D#%s}\""%(path, get_fwroot()), shell=True, executable='/bin/bash')
+
