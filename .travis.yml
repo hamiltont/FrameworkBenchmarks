@@ -13,7 +13,7 @@ env:
     - CACHE=siena
     - CACHE=treefrog
     - CACHE=vertx
-    - CACHE=wt.sh
+    - CACHE=wt
     - CACHE=yesod
     - CACHE=composer
     - CACHE=dart
