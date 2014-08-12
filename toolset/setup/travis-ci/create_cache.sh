@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Trick the installer
-export FWROOT=/tfb-cache
+export FWROOT=$(pwd)
 export IROOT=/tfb-cache/installs
 
 # Bring in the fw_ functions
@@ -17,12 +17,12 @@ sudo chown -R $USER:$USER $FWROOT
 cd $IROOT
 fw_depends $1
 
-# Name the tar dependency-commit.tar.gz e.g. perl-21341234123412341234.tar.gz
+# Name the tar dependency-commit.tar.gz e.g. perl-cad7a6e919a3285c6e1d6789929b1ed1e7c66fa2.tar.gz
 name=$1-${TRAVIS_COMMIT}.tar.gz
 echo using $name
 
 # Create the resulting tar file
-cd $FWROOT
+cd /tfb-cache
 tar cvf $name $IROOT
 
 # Upload tar file
