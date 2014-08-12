@@ -13,7 +13,7 @@ ls -la ~
 
 # Run the installation
 sudo mkdir -p $IROOT
-sudo chown -R $USER:$USER $FWROOT
+sudo chown -R $USER:$USER /tfb-cache
 cd $IROOT
 fw_depends $1
 
