@@ -24,18 +24,16 @@ fw_depends $1
 # installed, because it won't be for other workers ;-)
 rm -f fwbm_prereqs_installed
 
-# Name the tar dependency-commit.tar.gz e.g. perl-cad7a6e919a3285c6e1d6789929b1ed1e7c66fa2.tar.gz
-name=$1-${TRAVIS_COMMIT}.tar.gz
-
 # Create the resulting tar file
+name=$1.tar.gz
 echo Creating $name
 cd /tfb-cache
 tar cf $name $IROOT
 
-# Upload tar file
+# Upload tar file to a folder for this commit
 curl "https://raw.githubusercontent.com/andreafabrizi/Dropbox-Uploader/master/dropbox_uploader.sh" -o dropbox_uploader.sh
 chmod a+x dropbox_uploader.sh
-./dropbox_uploader.sh -f ~/.dropbox_uploader -p upload $name /
+./dropbox_uploader.sh -f ~/.dropbox_uploader -p upload $name /${TRAVIS_COMMIT}/$name
 
 # Print share link to console
-./dropbox_uploader.sh -f ~/.dropbox_uploader -p share $name
+./dropbox_uploader.sh -f ~/.dropbox_uploader share /${TRAVIS_COMMIT}/$name
