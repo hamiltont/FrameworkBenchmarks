@@ -4,7 +4,50 @@ python:
 
 env:
   matrix:
+    - CACHE=duda
+    - CACHE=leda
+    - CACHE=nawak
+    - CACHE=onion
+    - CACHE=play1
+    - CACHE=play2
+    - CACHE=siena
+    - CACHE=treefrog
+    - CACHE=vertx
+    - CACHE=wt.sh
+    - CACHE=yesod
+    - CACHE=composer
+    - CACHE=dart
+    - CACHE=elixir
+    - CACHE=erlang
+    - CACHE=go
+    - CACHE=haskell
+    - CACHE=hhvm
+    - CACHE=java
+    - CACHE=jruby
+    - CACHE=mono
+    - CACHE=nimrod
+    - CACHE=nodejs
     - CACHE=perl
+    - CACHE=phalcon
+    - CACHE=php
+    - CACHE=pypy
+    - CACHE=python2
+    - CACHE=python3
+    - CACHE=racket
+    - CACHE=ringojs
+    - CACHE=ruby
+    - CACHE=urweb
+    - CACHE=xsp
+    - CACHE=yaf
+    - CACHE=leiningen
+    - CACHE=maven
+    - CACHE=lapis
+    - CACHE=mongrel2
+    - CACHE=nginx
+    - CACHE=openresty
+    - CACHE=resin
+    - CACHE=weber
+    - CACHE=zeromq
 
 script: 
   - toolset/setup/travis-ci/create_cache.sh $CACHE
