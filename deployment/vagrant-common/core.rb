@@ -93,6 +93,9 @@ def provider_virtualbox(config, role)
     vb.memory = ENV.fetch('TFB_VB_MEM', 2048)
     vb.cpus = ENV.fetch('TFB_VB_CPU', 2)
 
+    # Always enable a link to the main host DNS resolver
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+
     override.vm.synced_folder "../..", "/FrameworkBenchmarks"
 
     if role.eql? "all" or role.eql? "app"
