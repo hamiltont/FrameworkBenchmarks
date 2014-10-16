@@ -123,6 +123,17 @@ if [ ! -e "~/.firstboot" ]; then
   if [ "$ROLE" == "server" ]; then
     # Ensure keys have proper permissions
     chmod 600 ~/.ssh/client ~/.ssh/database
+    
+    # Install Docker if we are the server. We do this here 
+    # instead of the prereq.sh file because we don't want this
+    # to happen inside the container. This should only happen
+    # if we are actually installing the host OS
+    sudo apt-get install -y docker.io lxc
+
+    # Use LXC driver so I can use --lxc-conf options to 
+    # manually configure my container cgroup settings
+    echo DOCKER_OPTS=\"--exec-driver=lxc -H=unix:///var/run/docker.sock -H=0.0.0.0:4243\" | sudo tee /etc/default/docker.io
+    sudo service docker.io restart
   elif [ "$ROLE" != "all" ]; then
     # Ensure keys can be used to ssh in
     echo "Setting up SSH access for the TFB-server"
