@@ -150,7 +150,7 @@ def inside_container():
 # Returns True if image exists with given tag
 def exists(image=None):
     c = docker.Client(base_url='http://127.0.0.1:4243',
-                  version='1.13',
+                  version='1.12',
                   timeout=10)
     images = c.images(image)
     return len(images) > 0
