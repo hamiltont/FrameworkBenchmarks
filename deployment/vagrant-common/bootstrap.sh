@@ -46,6 +46,8 @@ GH_BRANCH=${TFB_AWS_REPO_BRANCH:-master}
 # A shell provisioner is called multiple times
 if [ ! -e "~/.firstboot" ]; then
 
+  sudo apt-get update
+
   # Setup some nice TFB defaults
   if [ "$ROLE" == "all" ]; then
     echo "export TFB_CLIENT_IDENTITY_FILE=$HOME/.ssh/id_rsa" >> ~/.bash_profile
