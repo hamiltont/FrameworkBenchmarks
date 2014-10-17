@@ -75,7 +75,8 @@ class Installer:
       # manually clean the big stuff
       self.__run_command("rm -rf installs", cwd=self.fwroot)
       
-      for line in c.build(path=self.fwroot, tag=tag, stream=True, rm=True):
+      print "DOCKER: Tarring context...expect 5-10 minute wait"
+      for line in c.build(path=self.fwroot, tag=tag, stream=True, quiet=False, rm=True):
         setup_util.print_json_stream(line)
 
       if not setup_util.exists(tag):

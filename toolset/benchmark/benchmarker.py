@@ -883,6 +883,7 @@ class Benchmarker:
     # process will be able to write to results.json once we've
     # finished
     if self.docker_client:
+      print "DOCKER: Accessed parse_results from inside a container. Is this expected?"
       path = os.path.join(self.full_results_directory(), "results.json")
       os.chmod(path, 0777)
 
