@@ -70,7 +70,7 @@ class Installer:
       # TODO - warn that your private config is being included in the prerequisites container
 
       
-      self.__run_command("git ls-files --others --ignored --exclude-standard | grep -v benchmark.cfg | xargs rm -rf", cwd=self.fwroot)
+      # self.__run_command("git ls-files --others --ignored --exclude-standard | grep -v benchmark.cfg | xargs rm -rf", cwd=self.fwroot)
       # Note: There is a bug in git on Ubuntu12.04 that ls-files not list a number of biggies, so 
       # manually clean the big stuff
       self.__run_command("rm -rf installs", cwd=self.fwroot)
