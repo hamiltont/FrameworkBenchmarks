@@ -869,9 +869,9 @@ class Benchmarker:
   ############################################################
   def __parse_results(self, tests):
     # Run the method to get the commmit count of each framework.
-    self.__count_commits()
+    # self.__count_commits()
    # Call the method which counts the sloc for each framework
-    self.__count_sloc()
+    # self.__count_sloc()
 
     # Time to create parsed files
     # Aggregate JSON file
