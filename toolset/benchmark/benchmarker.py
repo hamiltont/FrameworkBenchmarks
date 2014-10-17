@@ -515,7 +515,8 @@ class Benchmarker:
 
   def __run_test_in_container(self, test):
     user = subprocess.check_output("printf $USER", shell=True)
-    repo="%s/fwbm-%s" % (user, test.name)
+    test_dir_name = os.path.relpath(test.directory, self.fwroot)[11:].replace('/','-').lower()
+    repo="%s/tfb-%s" % (user, test_dir_name)
     if not setup_util.exists(repo):
       print "DOCKER: Unable to run %s, image %s does not exist" % (test.name, repo)
       return
