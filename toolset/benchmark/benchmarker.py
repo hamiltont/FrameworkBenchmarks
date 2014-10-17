@@ -152,11 +152,7 @@ class Benchmarker:
     in_container = self.docker_client
     
     if not in_container: 
-      print textwrap.dedent("""
-      =====================================================
-        Preparing Server, Database, and Client ...
-      =====================================================
-      """)
+      print header("Preparing Server, Database, and Client ...", top='=', bottom='=')
       self.__setup_server()
       self.__setup_database()
       self.__setup_client()
@@ -165,22 +161,14 @@ class Benchmarker:
 
     # No need to print the same message twice
     if not in_container:
-      print textwrap.dedent("""
-      =====================================================
-        Running Tests ...
-      =====================================================
-      """)
+      print header("Running Tests ...", top='=', bottom='=')
     self.__run_tests(all_tests)
 
     ##########################
     # Parse results
     ##########################  
     if self.mode == "benchmark" and not self.docker_client:
-      print textwrap.dedent("""
-      =====================================================
-        Parsing Results ...
-      =====================================================
-      """)
+      print header("Parsing Results ...", top='=', bottom='=')
       self.__parse_results(all_tests)
 
     if not self.docker_client: 
@@ -495,12 +483,8 @@ class Benchmarker:
         pbar_test = pbar_test + 1
         if __name__ == 'benchmark.benchmarker':
           if self.docker: 
+            print header("Running Test Container For: %s ..." % test.name)
             test_process = Process(target=self.__run_test_in_container, args=(test,))
-            print textwrap.dedent("""
-            -----------------------------------------------------
-              Running Test Container For: {name} ...
-            -----------------------------------------------------
-            """.format(name=test.name))
           else: 
             print header("Running Test: %s" % test.name)
             with open('current_benchmark.txt', 'w') as benchmark_resume_file:
@@ -521,7 +505,7 @@ class Benchmarker:
     if os.path.isfile('current_benchmark.txt'):
       os.remove('current_benchmark.txt')
 
-    log.info("End __run_tests")
+    logging.info("End __run_tests")
     if error_happened:
       return 1
     return 0
@@ -1001,7 +985,7 @@ class Benchmarker:
   def __load_results(self):
     try:
       with open(os.path.join(self.latest_results_directory, 'results.json')) as f:
-        self.results = json.load(f)
+        results = json.load(f)
     except (ValueError, IOError):
       pass
     else:
