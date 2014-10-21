@@ -4,6 +4,8 @@ import ConfigParser
 import sys
 import os
 import multiprocessing
+import itertools
+import copy
 import subprocess
 from pprint import pprint 
 from benchmark.benchmarker import Benchmarker
@@ -13,6 +15,30 @@ from setup.linux import setup_util
 # Enable cross-platform colored output
 from colorama import init
 init()
+
+class StoreSeqAction(argparse.Action):
+  '''Helper class for parsing a sequence from the command line'''
+  def __init__(self, option_strings, dest, nargs=None, **kwargs):
+     super(StoreSeqAction, self).__init__(option_strings, dest, type=str, **kwargs)
+  def __call__(self, parser, namespace, values, option_string=None):
+    setattr(namespace, self.dest, self.parse_seq(values))
+  def parse_seq(self, argument):
+    try:
+      return [int(argument)]
+    except ValueError:
+      pass
+    if ":" in argument: # 
+      try:
+        (start,step,end) = argument.split(':')
+      except ValueError: 
+        print "Invalid: %s" % argument
+        print "Requires start:step:end, e.g. 1:2:10"
+        raise
+      result = range(int(start), int(end), int(step))
+    else:  # 1,2,3,7
+      result = argument.split(',')
+    return [abs(int(item)) for item in result]
+
 
 ###################################################################################################
 # Main
@@ -81,9 +107,15 @@ def main(argv=None):
     ##########################################################
     # Set up argument parser
     ##########################################################
-    parser = argparse.ArgumentParser(description='Run the Framework Benchmarking test suite.',
+    parser = argparse.ArgumentParser(description="Install or run the Framework Benchmarks test suite.",
         parents=[conf_parser],
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        epilog='''If an argument includes (type int-sequence), then it accepts integer lists in multiple forms. 
+        Using a single number e.g. 5 will create a list [5]. Using commas will create a list containing those 
+        values e.g. 1,3,6 creates [1, 3, 6]. Using three colon-separated numbers of start:step:end will create a 
+        list, using the semantics of python's range function, e.g. 1:3:15 creates [1, 4, 7, 10, 13] while 
+        0:1:5 creates [0, 1, 2, 3, 4]
+        ''')
 
     # SSH options
     parser.add_argument('-s', '--server-host', default=serverHost, help='The application server.')
@@ -108,8 +140,11 @@ def main(argv=None):
         help='''Affects `--install server`: With unified, all server software is installed into a single directory. 
         With pertest each test gets its own installs directory, but installation takes longer''')
     parser.add_argument('--install-only', action='store_true', default=False, help='Do not run benchmark or verification, just install and exit')
+    
     parser.add_argument('--docker', action='store_true', default=False, help='installs server software inside docker container')
     parser.add_argument('--docker-client', action='store_true', default=False, help='Internal Use Only, do not pass. Indicates we are running inside a docker container')
+    parser.add_argument('--docker-cpu', default=[50], action=StoreSeqAction, help='Percent of total CPU dockerized servers will be able to access (type int-sequence)')
+    parser.add_argument('--docker-ram', default=[1024], action=StoreSeqAction, help='RAM in MB that CPU dockerized servers will be able to access (type int-sequence)')
 
     # Test options
     parser.add_argument('--test', nargs='+', help='names of tests to run')
@@ -156,17 +191,52 @@ def main(argv=None):
         print 'Configuration options: '
         pprint(args)
 
-    benchmarker = Benchmarker(vars(args))
+    def run_benchmark(cpu, ram):
+      # Convert the arrays into single values
+      params = copy.deepcopy(vars(args))
+      params['docker_cpu'] = cpu
+      params['docker_ram'] = ram
 
-    # Run the benchmarker in the specified mode
-    if benchmarker.list_tests:
-      benchmarker.run_list_tests()
-    elif benchmarker.list_test_metadata:
-      benchmarker.run_list_test_metadata()
-    elif benchmarker.parse != None:
-      benchmarker.parse_timestamp()
-    elif not benchmarker.install_only:
-      return benchmarker.run()
+      # Name the run appropriately 
+      if not args.docker_client:
+        params['name'] = "%s_%s-CPU_%s-RAM" % (params['name'], cpu, ram)
+
+      benchmarker = Benchmarker(params)
+
+      # Run the benchmarker in the specified mode
+      if benchmarker.list_tests:
+        benchmarker.run_list_tests()
+      elif benchmarker.list_test_metadata:
+        benchmarker.run_list_test_metadata()
+      elif benchmarker.parse != None:
+        benchmarker.parse_timestamp()
+      elif not benchmarker.install_only:
+        return benchmarker.run()
+
+    if not args.docker_client: 
+      for (cpu, ram) in itertools.product(args.docker_cpu, args.docker_ram):
+        print "Running CPU %s%% and RAM %sMB" % (cpu, ram)
+        run_benchmark(cpu, ram)
+    else:
+      # Dummy numbers, should just be ignored...
+      run_benchmark(-1,-1)
+
+    return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument('--foo', action=StoreSeqAction)
+# tests = ["1", "0.23", "1:2", "1:2:10", "1,", "1,2,-3", "1,1000,12,1,1,1,1,1"]
+# for test in tests:
+#   try:
+#     t = "--foo %s" % test
+#     parser.parse_args(t.split())
+#   except Exception as e: 
+#     print "Exception! %s" % e
+#     continue
+
+
+# vim: sw=2
