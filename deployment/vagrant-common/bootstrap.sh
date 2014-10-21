@@ -140,13 +140,26 @@ if [ ! -e "~/.firstboot" ]; then
     # Do this here instead of the prereq.sh file because we don't want this
     # to happen inside the container. This should only happen
     # if we are actually installing the host OS
+    # Installs for both precise (12.04) and trusty (14.04) as we don't know which
+    # one is being bootstrapped
+    #
+    # Note: If you install docker for 12.04, be aware that you need to also
+    # update LXC to 1.0+ (it's 0.7.5 by default) or mounting and host networking 
+    # (and probably more) will not work. I don't know how to do this update so I've
+    # left it for you to figure out
+    #
     # NOTE: I doubt this will ever be merged to the main repo. If it is, then
-    # this has to happen if ROLE==all or ROLE==server
-    sudo apt-get install -y docker.io lxc
-
+    # this line has to happen if ROLE==all or ROLE==server
+    # curl -sSL https://get.docker.com/ | sh
+    # echo DOCKER_OPTS=\"--exec-driver=lxc -H=unix:///var/run/docker.sock -H=0.0.0.0:4243\" | sudo tee /etc/default/docker
+    # sudo service docker restart
+    sudo apt-get install -y lxc
+    sudo apt-get install -y docker.io 
+    
     # Use LXC driver so I can use --lxc-conf options to 
     # manually configure my container cgroup settings
     echo DOCKER_OPTS=\"--exec-driver=lxc -H=unix:///var/run/docker.sock -H=0.0.0.0:4243\" | sudo tee /etc/default/docker.io
+    
     sudo service docker.io restart
   fi
 
