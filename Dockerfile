@@ -27,5 +27,10 @@ ENV FWROOT /root/FrameworkBenchmarks
 RUN curl --silent --show-error --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo python2.7
 RUN pip install -r /root/FrameworkBenchmarks/config/python_requirements.txt
 
-# Trigger prereq installation
+# LXC execution driver requires folders to be created inside the container
+# before you can mount into them, so create the containers that we will use
+# when we actually run tests
+RUN mkdir /tmp/zz_ssh
+
+# Trigger prereq installation into localhost
 RUN toolset/run-tests.py --install server --test ''
