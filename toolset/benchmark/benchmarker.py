@@ -525,67 +525,47 @@ class Benchmarker:
     # Build run command
     command="toolset/run-tests.py --test %s --docker-client --verbose" % test.name
     command="%s --time %s" % (command, self.timestamp) # We only want one directory for results
-    if self.mode:
-      command="%s --mode %s" % (command, self.mode)
-    if self.name:
-      command="%s --name %s" % (command, self.name)
-    if self.type:
-      command="%s --type %s" % (command, self.type)
-    if self.duration:
-      command="%s --duration %s" % (command, self.duration)
-    if self.sleep:
-      command="%s --sleep %s" % (command, self.sleep)
-    if self.starting_concurrency:
-      command="%s --starting-concurrency %s" % (command, self.starting_concurrency)
-    if self.max_concurrency:
-      command="%s --max-concurrency %s" % (command, self.max_concurrency)
-    if self.max_threads:
-      command="%s --max-threads %s" % (command, self.max_threads)
-    if self.query_interval:
-      command="%s --query-interval %s" % (command, self.query_interval)
-    if self.max_queries:
-      command="%s --max-queries %s" % (command, self.max_queries)
-    if self.server_host:
-      command="%s --server-host %s" % (command, self.server_host)
-    if self.client_host:
-      command="%s --client-host %s" % (command, self.client_host)
-    if self.database_host:
-      command="%s --database-host %s" % (command, self.database_host)
-    if self.client_user:
-      command="%s --client-user %s" % (command, self.client_user)
-    if self.database_user:
-      command="%s --database-user %s" % (command, self.database_user)
-    
-
+    command="%s --mode %s" % (command, self.mode)
+    command="%s --name %s" % (command, self.name)
+    command="%s --type %s" % (command, self.type)
+    command="%s --duration %s" % (command, self.duration)
+    command="%s --sleep %s" % (command, self.sleep)
+    command="%s --concurrency-levels %s" % (command, ",".join(map(str, self.concurrency_levels)))
+    command="%s --threads %s" % (command, self.threads)
+    command="%s --query-levels %s" % (command, ",".join(map(str, self.query_levels)))
+    command="%s --server-host %s" % (command, self.server_host)
+    command="%s --client-host %s" % (command, self.client_host)
+    command="%s --database-host %s" % (command, self.database_host)
+    command="%s --client-user %s" % (command, self.client_user)
+    command="%s --database-user %s" % (command, self.database_user)
 
     # Handle SSH identity files
-    if self.client_identity_file: 
-      # Allows multiple path types e.g. foo, ../foo, ~/foo
-      ci=os.path.abspath(os.path.expanduser(self.client_identity_file))
-      ci_path = os.path.dirname(ci)
-      ci_file = os.path.basename(ci)
-      if ci_path == os.path.expanduser("~/.ssh"):
-        command="%s --client-identity-file /root/.ssh/%s" % (command, ci_file)
-        ci_mount = None
-      else:
-        # Bind mount, then copy so we can chown
-        # TODO I hate this. You could accidentally share your keys wiht the world via a push
-        # if you try and save this container
-        command="%s --client-identity-file /tmp/sshclient/%s" % (command, ci_file)
-        ci_mount = {ci_path: {'bind': '/tmp/zz_sshclient'}}
-        command="cp -R /tmp/zz_sshclient /tmp/sshclient && chown -R root:root /tmp/sshclient && %s" % command  
-    if self.database_identity_file:
-      di=os.path.abspath(os.path.expanduser(self.database_identity_file))
-      di_path = os.path.dirname(di)
-      di_file = os.path.basename(di)
-      if di_path == os.path.expanduser("~/.ssh"):
-        command="%s --database-identity-file /root/.ssh/%s" % (command, di_file)    
-        di_mount = None
-      else:
-        # TODO I hate this so much I'm leaving two comments
-        command="%s --database-identity-file /tmp/sshdb/%s" % (command, di_file)    
-        di_mount = {di_path: {'bind': '/tmp/zz_sshdb'}}
-        command="cp -R /tmp/zz_sshdb /tmp/sshdb && chown -R root:root /tmp/sshdb && %s" % command  
+    # Allows multiple path types e.g. foo, ../foo, ~/foo
+    ci=os.path.abspath(os.path.expanduser(self.client_identity_file))
+    ci_path = os.path.dirname(ci)
+    ci_file = os.path.basename(ci)
+    if ci_path == os.path.expanduser("~/.ssh"):
+      command="%s --client-identity-file /root/.ssh/%s" % (command, ci_file)
+      ci_mount = None
+    else:
+      # Bind mount, then copy so we can chown
+      # TODO I hate this. You could accidentally share your keys wiht the world via a push
+      # if you try and save this container
+      command="%s --client-identity-file /tmp/sshclient/%s" % (command, ci_file)
+      ci_mount = {ci_path: {'bind': '/tmp/zz_sshclient'}}
+      command="cp -R /tmp/zz_sshclient /tmp/sshclient && chown -R root:root /tmp/sshclient && %s" % command  
+    
+    di=os.path.abspath(os.path.expanduser(self.database_identity_file))
+    di_path = os.path.dirname(di)
+    di_file = os.path.basename(di)
+    if di_path == os.path.expanduser("~/.ssh"):
+      command="%s --database-identity-file /root/.ssh/%s" % (command, di_file)    
+      di_mount = None
+    else:
+      # TODO I hate this so much I'm leaving two comments
+      command="%s --database-identity-file /tmp/sshdb/%s" % (command, di_file)    
+      di_mount = {di_path: {'bind': '/tmp/zz_sshdb'}}
+      command="cp -R /tmp/zz_sshdb /tmp/sshdb && chown -R root:root /tmp/sshdb && %s" % command  
 
     c = setup_util.get_client()
     # Create container to run this test
@@ -613,8 +593,6 @@ class Benchmarker:
 
     # Run the test
     print "DOCKER: Preparing to run %s in container %s" % (test.name, cid)
-
-
     
     tool_dir = "%s/toolset" % self.fwroot
     resl_dir = "%s/results" % self.fwroot
@@ -635,7 +613,7 @@ class Benchmarker:
 
     lxc_options = {}
     if self.docker_cpu: 
-      # 500ms period. See Turner et al. CPU bandwidth control for CFS
+      # 500ms period. See Turner et al. "CPU bandwidth control for CFS"
       lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
       total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * available_cpu_count()
       lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_cpu / 100
