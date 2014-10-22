@@ -189,18 +189,9 @@ def main(argv=None):
 
     if args.verbose:
         print 'Configuration options: '
-        pprint(args)
+        pprint(vars(args))
 
-    def run_benchmark(cpu, ram):
-      # Convert the arrays into single values
-      params = copy.deepcopy(vars(args))
-      params['docker_cpu'] = cpu
-      params['docker_ram'] = ram
-
-      # Name the run appropriately 
-      if not args.docker_client:
-        params['name'] = "%s_%s-CPU_%s-RAM" % (params['name'], cpu, ram)
-
+    def run_benchmark(params):
       benchmarker = Benchmarker(params)
 
       # Run the benchmarker in the specified mode
@@ -213,30 +204,25 @@ def main(argv=None):
       elif not benchmarker.install_only:
         return benchmarker.run()
 
+    def run_benchmark_with_limits(cpu, ram):
+      # Convert the arrays into single values
+      params = copy.deepcopy(vars(args))
+      params['docker_cpu'] = cpu
+      params['docker_ram'] = ram
+
+      # Name the run appropriately 
+      params['name'] = "%s_%s-CPU_%s-RAM" % (params['name'], cpu, ram)
+      run_benchmark(params)
+
     if not args.docker_client: 
       for (cpu, ram) in itertools.product(args.docker_cpu, args.docker_ram):
         print "Running CPU %s%% and RAM %sMB" % (cpu, ram)
-        run_benchmark(cpu, ram)
+        # TODO save exit code if you care about that...
+        run_benchmark_with_limits(cpu, ram)
     else:
-      # Dummy numbers, should just be ignored...
-      run_benchmark(-1,-1)
-
-    return 0
-
+      return run_benchmark(vars(args))
 
 if __name__ == "__main__":
     sys.exit(main())
-
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--foo', action=StoreSeqAction)
-# tests = ["1", "0.23", "1:2", "1:2:10", "1,", "1,2,-3", "1,1000,12,1,1,1,1,1"]
-# for test in tests:
-#   try:
-#     t = "--foo %s" % test
-#     parser.parse_args(t.split())
-#   except Exception as e: 
-#     print "Exception! %s" % e
-#     continue
-
 
 # vim: sw=2
