@@ -401,9 +401,7 @@ class FrameworkTest:
       with open(self.benchmarker.stats_file(self.name, test_type) + ".json", "w") as stats_file:
         json.dump(stats, stats_file, indent=2)
 
-      return results
-    except IOError:
-      return None
+    return results
   ############################################################
   # End benchmark
   ############################################################
