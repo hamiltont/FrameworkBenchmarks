@@ -132,15 +132,11 @@ class Installer:
       tool_dir: { 'bind': toolvolume}
       })
 
-    # Fetch container output while we are running
-    while setup_util.is_running(cid):
-      output = c.attach(cid, stream=True)
-      for line in output:
-        # TODO: Occasionally there is a bug with the output generator 
-        # and it hangs indefinitely
-        print "DOCKER:tfb-%s: %s" % (test_dir_name, line.strip())
-      print "Looping for output..."
-      time.sleep(100.0 / 1000.0) # Sleep 100ms
+    output = c.attach(cid, stream=True)
+    for line in output:
+      # TODO: Occasionally there is a bug with the output generator 
+      # and it hangs indefinitely
+      print "DOCKER:tfb-%s: %s" % (test_dir_name, line.strip())
 
     # Check container exit code
     exit = c.wait(cid)

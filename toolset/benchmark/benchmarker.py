@@ -631,17 +631,15 @@ class Benchmarker:
     
     c.start(cid, binds=mounts, network_mode='host', lxc_conf=lxc_options)
 
-    # Fetch container output while we are running
-    while setup_util.is_running(cid):
-      output = c.attach(cid, stream=True)
-      last_had_newline = True
-      for line in output:
-        if last_had_newline: 
-          sys.stdout.write("%s: %s" % (repo, line))
-        else:
-          sys.stdout.write(line)
-        last_had_newline = line.endswith("\n")
-      time.sleep(100.0 / 1000.0) # Sleep 100ms
+    # Fetch container output
+    last_had_newline = True
+    output = c.attach(cid, stream=True)
+    for line in output:
+      if last_had_newline: 
+        sys.stdout.write("%s: %s" % (repo, line))
+      else:
+        sys.stdout.write(line)
+      last_had_newline = line.endswith("\n")
 
     # Check container exit code
     exit = c.wait(cid)
