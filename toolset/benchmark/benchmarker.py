@@ -1096,7 +1096,6 @@ class Benchmarker:
         args['types'] = types
     else:
         args['types'] = { args['type'] : types[args['type']] }
-    del args['type']
 
     self.__dict__.update(args)
     # pprint(self.__dict__)
