@@ -19,6 +19,7 @@ import sys
 import logging
 import socket
 import threading
+import textwrap
 from pprint import pprint
 
 from multiprocessing import Process
@@ -712,10 +713,16 @@ class Benchmarker:
           time.sleep(10)
 
         if self.__is_port_bound(test.port):
-          self.__write_intermediate_results(test.name, "port " + str(test.port) + " is not available before start")
-          err.write(header("Error: Port %s is not available, cannot start %s" % (test.port, test.name)))
+          err.write(header("Error: Port %s is not available, attempting to recover" % test.port))
           err.flush()
-          return exit_with_code(1)
+          print "Error: Port %s is not available, attempting to recover" % test.port
+          self.__forciblyEndPortBoundProcesses(test.port, out, err)
+          if self.__is_port_bound(test.port):
+            self.__write_intermediate_results(test.name, "port " + str(test.port) + " is not available before start")
+            err.write(header("Error: Port %s is not available, cannot start %s" % (test.port, test.name)))
+            err.flush()
+            print "Error: Unable to recover port, cannot start test"
+            return exit_with_code(1)
 
         result = test.start(out, err)
         if result != 0: 
@@ -857,41 +864,50 @@ class Benchmarker:
 
   def __forciblyEndPortBoundProcesses(self, test_port, out, err):
     p = subprocess.Popen(['sudo', 'netstat', '-lnp'], stdout=subprocess.PIPE)
-    out, err = p.communicate()
-    for line in out.splitlines():
+    (ns_out, ns_err) = p.communicate()
+    for line in ns_out.splitlines():
       if 'tcp' in line:
         splitline = line.split()
         port = splitline[3].split(':')
         port = int(port[len(port) - 1].strip())
+
         if port > 6000:
+          pid = splitline[6].split('/')[0].strip()
+          ps = subprocess.Popen(['ps','p',pid], stdout=subprocess.PIPE)
+          (out_6000, err_6000) = ps.communicate()
           err.write(textwrap.dedent(
-        """
-        A port that shouldn't be open is open. See the following line for netstat output.
-        {splitline}
-        """.format(splitline=splitline)))
+          """
+          Port {port} should not be open. See the following lines for information
+          {netstat}
+          {ps}
+          """.format(port=port, netstat=line, ps=out_6000)))
           err.flush()
         if port == test_port:
+          err.write( header("Error: Test port %s should not be open" % port, bottom='') )
           try:
             pid = splitline[6].split('/')[0].strip()
             ps = subprocess.Popen(['ps','p',pid], stdout=subprocess.PIPE)
             # Store some info about this process
-            proc = ps.communicate()
+            (out_15, err_15) = ps.communicate()
+            err.write("  Sending SIGTERM to this process:\n  %s\n" % out_15)
             os.kill(int(pid), 15)
             # Sleep for 10 sec; kill can be finicky
             time.sleep(10)
+
             # Check that PID again
             ps = subprocess.Popen(['ps','p',pid], stdout=subprocess.PIPE)
-            dead = ps.communicate()
-            if dead in proc:
+            (out_9, err_9) = ps.communicate()
+            if len(out_9.splitlines()) != 1:  # One line for the header row
+              err.write("  Process is still alive!\n")
+              err.write("  Sending SIGKILL to this process:\n   %s\n" % out_9)
               os.kill(int(pid), 9)
+            else:
+              err.write("  Process has been terminated\n")
           except OSError:
-            out.write( textwrap.dedent("""
-              -----------------------------------------------------
-                Error: Could not kill pid {pid}
-              -----------------------------------------------------
-              """.format(pid=str(pid))) )
+            out.write( "  Error: Could not kill pid %s\n" % pid )
             # This is okay; likely we killed a parent that ended
             # up automatically killing this before we could.
+          err.write( header("Done attempting to recover port %s" % port, top='') )
 
   ############################################################
   # __parse_results
