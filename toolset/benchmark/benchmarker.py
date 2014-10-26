@@ -1039,6 +1039,12 @@ class Benchmarker:
   # __finish
   ############################################################
   def __finish(self):
+
+    if hasattr(self, 'docker_client_container'):
+      print "Stopping docker client container"
+      c = setup_util.get_client()
+      c.stop(self.docker_client_container, timeout=60)
+
     tests = self.__gather_tests
     # Normally you don't have to use Fore.BLUE before each line, but 
     # Travis-CI seems to reset color codes on newline (see travis-ci/travis-ci#2692)
@@ -1195,6 +1201,58 @@ class Benchmarker:
     if self.client_identity_file != None:
       self.client_ssh_string = self.client_ssh_string + " -i " + self.client_identity_file
 
+    # If we are the master, turn on the load generation container
+    # TODO eventually this should only happen if mode==benchmark
+    if self.docker and not self.docker_client:
+      print "Starting docker client!"
+      c = setup_util.get_client()
+
+      # Ensure container is built
+      repo="%s/tfb-client" % subprocess.check_output("printf $USER", shell=True)
+      if not setup_util.exists(repo):
+        path = self.fwroot + '/toolset/setup/docker/client'
+        print "DOCKER: No client container, building %s (cwd=%s)" % (repo,path)
+        for line in c.build(path=path, tag=repo, stream=True, quiet=False, rm=True):
+          setup_util.print_json_stream(line)
+        print "DOCKER: Built %s" % repo
+
+      # Run container
+      #
+      # Note: Container will vacuum up any public key files from /tmp/zz_ssh
+      #       and set them up for passwordless SSH access, so all we have to 
+      #       do here is mount the folder containing our public key files. We
+      #       assume that's the folder where the client_identity_file is from
+      #
+      print "DOCKER: Starting %s" % repo
+      client = c.create_container(repo, volumes=[ '/tmp/zz_ssh' ])
+      key_dir = os.path.abspath(os.path.dirname(os.path.expanduser(self.client_identity_file)))
+      print "DOCKER: Client will search %s for public keys" % key_dir
+      mounts={
+        key_dir : { 'bind': '/tmp/zz_ssh' }, 
+      }
+      
+      d_command = "sudo docker run -d --net=host -v %s:/tmp/zz_ssh %s" % (key_dir, repo)
+      print "DOCKER: Running client container using %s" % d_command
+      c.start(client, binds=mounts, network_mode='host') #  , lxc_conf=lxc_options)
+
+      # Update SSH connection string 
+      #   Client container uses u/p root:root and port 2332 
+      self.client_ssh_string = "ssh -T -o StrictHostKeyChecking=no root@localhost -p 2332"
+      self.client_ssh_string += " -i " + self.client_identity_file
+
+      print "DOCKER: Master will use client SSH string %s" % self.client_ssh_string
+
+      self.docker_client_container = client
+    elif self.docker_client:
+      # If we are running inside the server container, update the client SSH 
+      # string to include the port. Note that the client is started from 
+      # the server container, which has a mount containing the client_identity_file
+      self.client_ssh_string = "ssh -T -o StrictHostKeyChecking=no root@localhost -p 2332"
+      self.client_ssh_string += " -i " + self.client_identity_file
+      print "DOCKER: Server will use client SSH string %s" % self.client_ssh_string
+
+
+        
     if self.install is not None:
       install = Installer(self, self.install_strategy, self.docker)
       install.install_software()

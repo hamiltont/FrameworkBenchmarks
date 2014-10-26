@@ -10,6 +10,7 @@ export DEBIAN_FRONTEND=noninteractive
 ##############################
 # WARNING: DONT PUT A SPACE AFTER ANY BACKSLASH OR APT WILL BREAK
 # Dpkg::Options avoid hangs on Travis-CI, don't affect clean systems
+sudo apt-get update
 sudo apt-get -y install -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
     build-essential git libev-dev libpq-dev libreadline6-dev
 
