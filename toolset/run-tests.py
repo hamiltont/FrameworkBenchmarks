@@ -202,6 +202,9 @@ def main(argv=None):
       elif not benchmarker.install_only:
         return benchmarker.run()
 
+    # TODO make cpuset a parameter here. I have no clear idea 
+    # how, because that means cpuset flag is a list of lists, 
+    # but I should be doing itertools(cpu,ram,cpusets)
     def run_benchmark_with_limits(cpu, ram):
       # Convert the arrays into single values
       params = copy.deepcopy(vars(args))
@@ -209,7 +212,9 @@ def main(argv=None):
       params['docker_server_ram'] = ram
 
       # Name the run appropriately 
-      params['name'] = "%s_%s-CPU_%s-RAM" % (params['name'], cpu, ram)
+      cpus = "".join([str(x) for x in params['docker_server_cpuset']])
+      params['name'] = "%s_%s-CPU_%s-RAM_%s-SET" % (params['name'], cpu, ram, cpus)
+
       run_benchmark(params)
 
     if not args.docker_client: 
