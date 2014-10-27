@@ -140,8 +140,11 @@ def main(argv=None):
     
     parser.add_argument('--docker', action='store_true', default=False, help='installs server software inside docker container')
     parser.add_argument('--docker-client', action='store_true', default=False, help='Internal Use Only, do not pass. Indicates we are running inside a docker container')
-    parser.add_argument('--docker-cpu', default=[50], action=StoreSeqAction, help='Percent of total CPU dockerized servers will be able to access (type int-sequence)')
-    parser.add_argument('--docker-ram', default=[1024], action=StoreSeqAction, help='RAM in MB that CPU dockerized servers will be able to access (type int-sequence)')
+    parser.add_argument('--docker-server-cpu', default=[100], action=StoreSeqAction, help='Percent of total CPU dockerized servers will be able to access (type int-sequence)')
+    parser.add_argument('--docker-server-ram', default=[1000], action=StoreSeqAction, help='RAM in MB that CPU dockerized servers will be able to access (type int-sequence)')
+    parser.add_argument('--docker-server-cpuset', default=[0], action=StoreSeqAction, help='Set processor affinity to these physical processor ids (type int-sequence)')
+    parser.add_argument('--docker-client-cpuset', default=[1], action=StoreSeqAction, help='Set processor affinity to these physical processor ids (type int-sequence)')
+    parser.add_argument('--docker-client-ram', default=1024, type=int, help='RAM in MB that CPU dockerized load generator will be able to access')
 
     # Test options
     parser.add_argument('--test', nargs='+', help='names of tests to run')
@@ -202,15 +205,15 @@ def main(argv=None):
     def run_benchmark_with_limits(cpu, ram):
       # Convert the arrays into single values
       params = copy.deepcopy(vars(args))
-      params['docker_cpu'] = cpu
-      params['docker_ram'] = ram
+      params['docker_server_cpu'] = cpu
+      params['docker_server_ram'] = ram
 
       # Name the run appropriately 
       params['name'] = "%s_%s-CPU_%s-RAM" % (params['name'], cpu, ram)
       run_benchmark(params)
 
     if not args.docker_client: 
-      for (cpu, ram) in itertools.product(args.docker_cpu, args.docker_ram):
+      for (cpu, ram) in itertools.product(args.docker_server_cpu, args.docker_server_ram):
         print "Running CPU %s%% and RAM %sMB" % (cpu, ram)
         # TODO save exit code if you care about that...
         run_benchmark_with_limits(cpu, ram)

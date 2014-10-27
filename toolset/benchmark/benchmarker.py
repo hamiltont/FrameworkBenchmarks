@@ -615,17 +615,21 @@ class Benchmarker:
       vols="%s -v %s:%s" % (vols, host_path, mounts[host_path]['bind'])
 
     lxc_options = {}
-    if self.docker_cpu: 
+    if self.docker_server_cpu:
       # 500ms period. See Turner et al. "CPU bandwidth control for CFS"
       lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
       total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * available_cpu_count()
-      lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_cpu / 100
-      print "DOCKER: Allowing %s%% CPU across %s CPUs - (%s / %s)" % (self.docker_cpu, available_cpu_count(), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
-    if self.docker_ram:
+      lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_server_cpu / 100
+      print "DOCKER: Allowing %s%% CPU across %s CPUs - (%s / %s)" % (self.docker_server_cpu, available_cpu_count(), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
+    if self.docker_server_ram:
       # Set (swap+ram)==(ram) to disable swap
       # See http://stackoverflow.com/a/26482080/119592
-      lxc_options['lxc.cgroup.memory.max_usage_in_bytes']= "%sM" % self.docker_ram
-      lxc_options['lxc.cgroup.memory.limit_in_bytes']    = "%sM" % self.docker_ram
+      lxc_options['lxc.cgroup.memory.max_usage_in_bytes']= "%sM" % self.docker_server_ram
+      lxc_options['lxc.cgroup.memory.limit_in_bytes']    = "%sM" % self.docker_server_ram
+      print "DOCKER: Allowing %s MB real RAM" % self.docker_server_ram
+    if self.docker_server_cpuset:
+      lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
+      print "DOCKER: Allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
     
     lxc = " ".join([ "--lxc-conf=\"%s=%s\""%(k,v) for k,v in lxc_options.iteritems()])
     print "DOCKER: Running this monstrosity: sudo docker run %s --net='host' -i -t %s %s /bin/sh -c '%s'" % (lxc, vols, repo, command)
@@ -1244,9 +1248,27 @@ class Benchmarker:
         key_dir : { 'bind': '/tmp/zz_ssh' }, 
       }
       
-      d_command = "sudo docker run -d --net=host -v %s:/tmp/zz_ssh %s" % (key_dir, repo)
-      print "DOCKER: Running client container using %s" % d_command
-      c.start(client, binds=mounts, network_mode='host') #  , lxc_conf=lxc_options)
+
+      lxc_options = {}
+      if self.docker_client_cpuset:
+        lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
+        print "DOCKER: Client allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
+      if self.docker_client_ram:
+        # Set (swap+ram)==(ram) to disable swap
+        # See http://stackoverflow.com/a/26482080/119592
+        if self.docker_client_ram < 800:
+          print "DOCKER: ERROR: wrk requires at least 800MB of RAM. Increasing %s to 850" % self.docker_client_ram
+          self.docker_client_ram = 850
+          print "DOCKER: WARNING: If you are running wrk and the server on the same host, be sure you have enough mem for both!"
+        lxc_options['lxc.cgroup.memory.max_usage_in_bytes']= "%sM" % self.docker_client_ram
+        lxc_options['lxc.cgroup.memory.limit_in_bytes']    = "%sM" % self.docker_client_ram
+        print "DOCKER: Client allowing %s MB real RAM" % self.docker_client_ram
+      lxc = " ".join([ "--lxc-conf=\"%s=%s\""%(k,v) for k,v in lxc_options.iteritems()])
+      d_command = "sudo docker run -d %s --net=host -v %s:/tmp/zz_ssh %s" % (lxc, key_dir, repo)
+      
+      print "DOCKER: Running client container using:"
+      print "DOCKER: %s" % d_command
+      c.start(client, binds=mounts, network_mode='host', lxc_conf=lxc_options)
 
       # Update SSH connection string 
       #   Client container uses u/p root:root and port 2332 
@@ -1263,7 +1285,6 @@ class Benchmarker:
       self.client_ssh_string = "ssh -T -o StrictHostKeyChecking=no root@localhost -p 2332"
       self.client_ssh_string += " -i " + self.client_identity_file
       print "DOCKER: Server will use client SSH string %s" % self.client_ssh_string
-
 
         
     if self.install is not None:
