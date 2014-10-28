@@ -525,6 +525,13 @@ class Benchmarker:
       print "DOCKER: Unable to run %s, image %s does not exist" % (test.name, repo)
       return
 
+    # Ensure container is not already running
+    c = setup_util.get_client()
+    for container in c.containers():
+      if container['Image'].startswith(repo):
+        print "DOCKER: ERROR - Container %s already running. Killing" % repo
+        c.stop(container, timeout=15)
+
     # Build run command
     command="toolset/run-tests.py --test %s --docker-client --verbose" % test.name
     command="%s --time %s" % (command, self.timestamp) # We only want one directory for results
@@ -570,7 +577,6 @@ class Benchmarker:
       di_mount = {di_path: {'bind': '/tmp/zz_sshdb'}}
       command="cp -R /tmp/zz_sshdb /tmp/sshdb && chown -R root:root /tmp/sshdb && %s" % command  
 
-    c = setup_util.get_client()
     # Create container to run this test
     #
     #   - base on installation container
@@ -1233,6 +1239,12 @@ class Benchmarker:
           setup_util.print_json_stream(line)
         print "DOCKER: Built %s" % repo
 
+      # Ensure tfb-client is not already running
+      for container in c.containers():
+        if container['Image'].startswith(repo):
+          print "DOCKER: ERROR - Container %s already running. Killing" % repo
+          c.stop(container, timeout=15)
+
       # Run container
       #
       # Note: Container will vacuum up any public key files from /tmp/zz_ssh
@@ -1248,7 +1260,6 @@ class Benchmarker:
         key_dir : { 'bind': '/tmp/zz_ssh' }, 
       }
       
-
       lxc_options = {}
       if self.docker_client_cpuset:
         lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
