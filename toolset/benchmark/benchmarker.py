@@ -549,10 +549,6 @@ class Benchmarker:
     command="%s --client-user %s" % (command, self.client_user)
     command="%s --database-user %s" % (command, self.database_user)
 
-    # TODO figure out why some servers seem to require this 
-    # extra installation step
-    command += " --install server"
-
     # Handle SSH identity files
     # Allows multiple path types e.g. foo, ../foo, ~/foo
     ci=os.path.abspath(os.path.expanduser(self.client_identity_file))
@@ -590,18 +586,21 @@ class Benchmarker:
     #   - mount ~/.ssh in case they have a config file with keys defined
     #     TODO: check what happens if .ssh doesn't exist
     #   - mount folders for identity file locations
+    #   - mount this test's directory in case the contents have been updated
+    #     since the prereq folder was built
 
     # Bind mount ssh, then copy so we can chown it
     ssh_volume="/tmp/zz_ssh" 
     command="cp -R /tmp/zz_ssh /root/.ssh && chown -R root:root /root/.ssh && %s" % command  
     toolvolume="/root/FrameworkBenchmarks/toolset"
     reslvolume="/root/FrameworkBenchmarks/results"
+    testvolume="/root/FrameworkBenchmarks/%s" % os.path.relpath(test.directory, self.fwroot)
 
     # docker-py can only run one command (e.g. no &&), so we 
     # run bash as our one and pass it the command we really want
     command="bash -c \"%s\"" % command
     install_container = c.create_container(repo, command=command,
-      volumes=[toolvolume, reslvolume, ssh_volume])
+      volumes=[toolvolume, reslvolume, ssh_volume, testvolume])
     cid = install_container['Id']
 
     # Run the test
@@ -610,10 +609,12 @@ class Benchmarker:
     tool_dir = "%s/toolset" % self.fwroot
     resl_dir = "%s/results" % self.fwroot
     ssh__dir = os.path.expanduser("~/.ssh")
+    test_dir = test.directory
     mounts={
       resl_dir: { 'bind': reslvolume}, 
       tool_dir: { 'bind': toolvolume},
-      ssh__dir: { 'bind': ssh_volume}
+      ssh__dir: { 'bind': ssh_volume},
+      test_dir: { 'bind': testvolume}
       }
     if ci_mount: 
       mounts.update(ci_mount)

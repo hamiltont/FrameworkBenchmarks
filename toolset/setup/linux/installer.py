@@ -115,6 +115,17 @@ class Installer:
     #     are detected and included in build
     #   - mount toolset directory in case you're a developer making
     #     changes to that
+    #
+    #
+    #
+    #    -  TODO  Just binding the folder in during the build does not work, because when you 
+    #             later run this container this frameworks folder will still be what was ADD'ed when
+    #             the prereqs container was contstructed. I can either add this bind mount in when 
+    #             actually running the container too, or I can just create a Dockerfile and 
+    #             ADD the contents of this folder over the prereq container, 
+    #             preferrably running a git clean first to ensure that you are not adding anything 
+    #             intended to be temporary (or should just warn about this stuff?). Would require a
+    #             adding a Dockerfile into this directory, using to build, and then deleted
     prerequisites="%s/tfb-prerequisites" % user
     command="toolset/run-tests.py --install server --test %s --install-error-action abort --install-only --docker-client --verbose" % test_name
     testvolume="/root/FrameworkBenchmarks/%s" % os.path.relpath(test_dir, self.fwroot)
