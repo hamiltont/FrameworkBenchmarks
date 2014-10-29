@@ -2,11 +2,16 @@ import multiprocessing
 import os
 import sys
 
+# Quick hack to patch the detected CPU cores
+sys.path.append('.')
+sys.path.append('/root/FrameworkBenchmarks/toolset/benchmark')
+from utils import available_cpu_count
+
 _is_pypy = hasattr(sys, 'pypy_version_info')
 _is_travis = os.environ.get('TRAVIS') == 'true'
 
 # only implements json and plain. Not wait DB.
-workers = multiprocessing.cpu_count()
+workers = available_cpu_count()
 if _is_travis:
     workers = 2
 
