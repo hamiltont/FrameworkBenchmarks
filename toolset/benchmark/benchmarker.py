@@ -549,6 +549,10 @@ class Benchmarker:
     command="%s --client-user %s" % (command, self.client_user)
     command="%s --database-user %s" % (command, self.database_user)
 
+    # TODO figure out why some servers seem to require this 
+    # extra installation step
+    command += " --install server"
+
     # Handle SSH identity files
     # Allows multiple path types e.g. foo, ../foo, ~/foo
     ci=os.path.abspath(os.path.expanduser(self.client_identity_file))
