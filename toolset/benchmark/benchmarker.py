@@ -631,7 +631,7 @@ class Benchmarker:
       lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
       total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * available_cpu_count()
       lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_server_cpu / 100
-      print "DOCKER: Allowing %s%% CPU across %s CPUs - (%s / %s)" % (self.docker_server_cpu, available_cpu_count(), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
+      print "DOCKER: Allowing up to %s%% CPU time (total of %s CPUs - %s / %s)" % (self.docker_server_cpu, available_cpu_count(), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
     if self.docker_server_ram:
       # Set (swap+ram)==(ram) to disable swap
       # See http://stackoverflow.com/a/26482080/119592
