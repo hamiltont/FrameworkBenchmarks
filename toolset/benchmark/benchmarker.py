@@ -625,23 +625,22 @@ class Benchmarker:
     for host_path in mounts.keys():
       vols="%s -v %s:%s" % (vols, host_path, mounts[host_path]['bind'])
 
-    lxc_options = {}
-    if self.docker_server_cpu:
-      # 500ms period. See Turner et al. "CPU bandwidth control for CFS"
-      lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
-      total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * available_cpu_count()
-      lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_server_cpu / 100
-      print "DOCKER: Allowing up to %s%% CPU time (total of %s CPUs - %s / %s)" % (self.docker_server_cpu, available_cpu_count(), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
-    if self.docker_server_ram:
-      # Set (swap+ram)==(ram) to disable swap
-      # See http://stackoverflow.com/a/26482080/119592
-      lxc_options['lxc.cgroup.memory.max_usage_in_bytes']= "%sM" % self.docker_server_ram
-      lxc_options['lxc.cgroup.memory.limit_in_bytes']    = "%sM" % self.docker_server_ram
-      print "DOCKER: Allowing %s MB real RAM" % self.docker_server_ram
-    if self.docker_server_cpuset:
-      lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
-      print "DOCKER: Allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
+    lxc_options = {}  
+    lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
+    print "DOCKER: Allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
     
+    # 500ms period. See Turner et al. "CPU bandwidth control for CFS"
+    lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
+    total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * available_cpu_count()
+    lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_server_cpu / 100
+    print "DOCKER: Allowing up to %s%% CPU time (total of %s CPUs - %s / %s)" % (self.docker_server_cpu, available_cpu_count(), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
+  
+    # Set (swap+ram)==(ram) to disable swap
+    # See http://stackoverflow.com/a/26482080/119592
+    lxc_options['lxc.cgroup.memory.max_usage_in_bytes']= "%sM" % self.docker_server_ram
+    lxc_options['lxc.cgroup.memory.limit_in_bytes']    = "%sM" % self.docker_server_ram
+    print "DOCKER: Allowing %s MB real RAM" % self.docker_server_ram
+  
     lxc = " ".join([ "--lxc-conf=\"%s=%s\""%(k,v) for k,v in lxc_options.iteritems()])
     print "DOCKER: Running this monstrosity: sudo docker run %s --net='host' -i -t %s %s /bin/sh -c '%s'" % (lxc, vols, repo, command)
     
