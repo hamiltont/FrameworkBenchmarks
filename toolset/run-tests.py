@@ -34,7 +34,7 @@ class StoreSeqAction(argparse.Action):
         raise
       result.remove(sequence)
       result = result + range(int(start), int(end), int(step))
-    return [abs(int(item)) for item in result]
+    return [int(item) for item in result]
 
 
 ###################################################################################################

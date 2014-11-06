@@ -626,14 +626,20 @@ class Benchmarker:
       vols="%s -v %s:%s" % (vols, host_path, mounts[host_path]['bind'])
 
     lxc_options = {}  
-    lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
-    print "DOCKER: Allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
+    if -1 in self.docker_server_cpuset:
+      print "DOCKER: Disabling CPU pinning"
+    else:
+      lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
+      print "DOCKER: Allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
     
-    # 500ms period. See Turner et al. "CPU bandwidth control for CFS"
-    lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
-    total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * len(self.docker_server_cpuset)
-    lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_server_cpu / 100
-    print "DOCKER: Allowing up to %s%% CPU time (total of %s CPUs allowed - %s / %s)" % (self.docker_server_cpu, len(self.docker_server_cpuset), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
+    if -1 == self.docker_server_cpu:
+      print "DOCKER: Disabling CFS bandwidth limits"
+    else:
+      # 500ms period. See Turner et al. "CPU bandwidth control for CFS"
+      lxc_options['lxc.cgroup.cpu.cfs_period_us'] = 500 * 1000
+      total_bandwidth = lxc_options['lxc.cgroup.cpu.cfs_period_us'] * len(self.docker_server_cpuset)
+      lxc_options['lxc.cgroup.cpu.cfs_quota_us'] =  total_bandwidth * self.docker_server_cpu / 100
+      print "DOCKER: Allowing up to %s%% CPU time (total of %s CPUs allowed - %s / %s)" % (self.docker_server_cpu, len(self.docker_server_cpuset), lxc_options['lxc.cgroup.cpu.cfs_quota_us'], total_bandwidth)
   
     # Set (swap+ram)==(ram) to disable swap
     # See http://stackoverflow.com/a/26482080/119592
