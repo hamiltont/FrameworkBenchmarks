@@ -27,6 +27,12 @@ make
 sudo cp wrk /usr/local/bin
 cd ~
 
+git clone https://github.com/giltene/wrk2.git
+cd wrk2
+make
+mv wrk wrk2
+sudo cp wrk2 /usr/local/bin
+
 #############################
 # pipeline.lua
 #############################
