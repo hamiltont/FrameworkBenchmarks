@@ -1276,6 +1276,15 @@ class Benchmarker:
       if self.docker_client_cpuset:
         lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_client_cpuset)
         print "DOCKER: Client allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
+        
+        # Update threads to be correct e.g. run wrk with threads == client logical processors
+        self.threads = len(self.docker_client_cpuset)
+
+        # Update max_threads (whcih is used only by frameworks) to be correct == logical processors 
+        # allowed for this server
+        self.max_threads = len(self.docker_server_cpuset)
+
+        print "DOCKER: Updated `threads` to %s and `max_threads` to %s" % (self.threads, self.max_threads)
       if self.docker_client_ram:
         # Set (swap+ram)==(ram) to disable swap
         # See http://stackoverflow.com/a/26482080/119592
