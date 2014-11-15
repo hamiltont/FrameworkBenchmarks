@@ -41,6 +41,13 @@ RUN cd ~ && \
     rm -rf FrameworkBenchmarks && \
     rm -f client.sh
 
+RUN cd ~ && \
+    git clone https://github.com/giltene/wrk2.git && \
+    cd wrk2 && \
+    make && \
+    mv wrk wrk2 && \
+    sudo cp wrk2 /usr/local/bin
+
 # Must do the copy on run to properly setup 
 # keys when the user mounts a volume at /tmp/zz_ssh
 CMD for k in `ls /tmp/zz_ssh/*.pub`; do cat $k >> /root/.ssh/authorized_keys; done && \
