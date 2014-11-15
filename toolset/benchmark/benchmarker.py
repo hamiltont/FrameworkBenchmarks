@@ -1274,7 +1274,7 @@ class Benchmarker:
       
       lxc_options = {}
       if self.docker_client_cpuset:
-        lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
+        lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_client_cpuset)
         print "DOCKER: Client allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
       if self.docker_client_ram:
         # Set (swap+ram)==(ram) to disable swap
