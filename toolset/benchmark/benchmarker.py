@@ -548,6 +548,8 @@ class Benchmarker:
     command="%s --database-host %s" % (command, self.database_host)
     command="%s --client-user %s" % (command, self.client_user)
     command="%s --database-user %s" % (command, self.database_user)
+    if self.docker_no_server_stop:
+      command="%s --docker-no-server-stop" % command
 
     # Handle SSH identity files
     # Allows multiple path types e.g. foo, ../foo, ~/foo
@@ -764,6 +766,14 @@ class Benchmarker:
         passed_verify = test.verify_urls(out, err)
         out.flush()
         err.flush()
+
+
+        if self.docker_client and self.docker_no_server_stop:
+          out.write(header("Not benchmarking %s, or calling server stop function." % test.name))
+          out.write("It's alive, now have your fun. This process is sleeping for 30 minutes, then exiting")
+          out.flush()
+          time.sleep(60*30)
+          return exit_with_code(0)
 
         ##########################
         # Benchmark this test
