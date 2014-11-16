@@ -1110,32 +1110,33 @@ class Benchmarker:
   ############################################################
   def __finish(self):
 
-    if hasattr(self, 'docker_client_container'):
+    if self.docker_containerize_client:
       print "Stopping docker client container"
       c = setup_util.get_client()
       c.stop(self.docker_client_container, timeout=60)
 
-    tests = self.__gather_tests
-    # Normally you don't have to use Fore.BLUE before each line, but 
-    # Travis-CI seems to reset color codes on newline (see travis-ci/travis-ci#2692)
-    # or stream flush, so we have to ensure that the color code is printed repeatedly
-    prefix = Fore.CYAN
-    for line in header("Verification Summary", top='=', bottom='').split('\n'):
-      print prefix + line
-    for test in tests:
-      print prefix + "| Test: %s" % test.name
-      if test.name in self.results['verify'].keys():
-        for test_type, result in self.results['verify'][test.name].iteritems():
-          if result.upper() == "PASS":
-            color = Fore.GREEN
-          elif result.upper() == "WARN":
-            color = Fore.YELLOW
-          else:
-            color = Fore.RED
-          print prefix + "|       " + test_type.ljust(11) + ' : ' + color + result.upper()
-      else:
-        print prefix + "|      " + Fore.RED + "NO RESULTS (Did framework launch?)"
-    print prefix + header('', top='', bottom='=') + Style.RESET_ALL
+    if not self.docker_client: 
+      tests = self.__gather_tests
+      # Normally you don't have to use Fore.BLUE before each line, but 
+      # Travis-CI seems to reset color codes on newline (see travis-ci/travis-ci#2692)
+      # or stream flush, so we have to ensure that the color code is printed repeatedly
+      prefix = Fore.CYAN
+      for line in header("Verification Summary", top='=', bottom='').split('\n'):
+        print prefix + line
+      for test in tests:
+        print prefix + "| Test: %s" % test.name
+        if test.name in self.results['verify'].keys():
+          for test_type, result in self.results['verify'][test.name].iteritems():
+            if result.upper() == "PASS":
+              color = Fore.GREEN
+            elif result.upper() == "WARN":
+              color = Fore.YELLOW
+            else:
+              color = Fore.RED
+            print prefix + "|       " + test_type.ljust(11) + ' : ' + color + result.upper()
+        else:
+          print prefix + "|      " + Fore.RED + "NO RESULTS (Did framework launch?)"
+      print prefix + header('', top='', bottom='=') + Style.RESET_ALL
 
     print "Time to complete: " + str(int(time.time() - self.start_time)) + " seconds"
     print "Results are saved in " + os.path.join(self.result_directory, self.timestamp)
@@ -1272,10 +1273,8 @@ class Benchmarker:
     if self.client_identity_file != None:
       self.client_ssh_string = self.client_ssh_string + " -i " + self.client_identity_file
 
-    # If we are the master, turn on the load generation container
-    # TODO eventually this should only happen if mode==benchmark
-    if self.docker and not self.docker_client:
-      print "Starting docker client!"
+    def start_container_for_client(self): 
+      print "Starting docker container for client load generation"
       c = setup_util.get_client()
 
       # Ensure container is built
@@ -1346,13 +1345,22 @@ class Benchmarker:
       print "DOCKER: Master will use client SSH string %s" % self.client_ssh_string
 
       self.docker_client_container = client
-    elif self.docker_client:
-      # If we are running inside the server container, update the client SSH 
-      # string to include the port. Note that the client is started from 
-      # the server container, which has a mount containing the client_identity_file
-      self.client_ssh_string = "ssh -T -o StrictHostKeyChecking=no root@localhost -p 2332"
-      self.client_ssh_string += " -i " + self.client_identity_file
-      print "DOCKER: Server will use client SSH string %s" % self.client_ssh_string
+
+    # Did user request to run load generation inside a container? 
+    if self.docker_containerize_client: 
+      # Are we the master? 
+      if self.docker and not self.docker_client:
+        # TODO eventually this should only happen if mode==benchmark
+        start_container_for_client(self)
+      elif self.docker_client:
+        # Note: Client load generation is started from **inside** the server container
+        # 
+        # Update the client SSH string to include the host IP address and container's exposed port
+        # We have to assume the that client_host is an IP address external to the server container
+        # we are currently inside of
+        self.client_ssh_string = "ssh -T -o StrictHostKeyChecking=no root@%s -p 2332" % self.client_host
+        self.client_ssh_string += " -i " + self.client_identity_file
+        print "DOCKER: Server will use client SSH string %s" % self.client_ssh_string
 
         
     if self.install is not None:

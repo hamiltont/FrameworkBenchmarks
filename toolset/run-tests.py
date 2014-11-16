@@ -147,6 +147,7 @@ def main(argv=None):
     parser.add_argument('--docker-client-ram', default=1024, type=int, help='RAM in MB that CPU dockerized load generator will be able to access')
     parser.add_argument('--docker-no-server-stop', action='store_true', default=False, help='Turns on server, but does not benchmark it or shut it down. Just sleeps TFB and leaves server running')
     parser.add_argument('--docker-port-file', default='', help='Internal used only, do not pass. Allows containerized server to know what public port it is exposed on')
+    parser.add_argument('--docker-containerize-client', action='store_true', default=False, help='Puts the load generation into a container. Enables docker-client-* options')
 
     # Test options
     parser.add_argument('--test', nargs='+', help='names of tests to run')
