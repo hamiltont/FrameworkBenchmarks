@@ -822,7 +822,6 @@ class Benchmarker:
         test.stop(out, err)
         out.flush()
         err.flush()
-        time.sleep(5)
 
         if self.__is_port_bound(test.port):
           err.write("Port %s was not freed. Attempting to free it." % (test.port, ))
@@ -838,7 +837,6 @@ class Benchmarker:
 
         out.write(header("Stopped %s" % test.name))
         out.flush()
-        time.sleep(5)
 
         ##########################################################
         # Save results thus far into toolset/benchmark/latest.json
