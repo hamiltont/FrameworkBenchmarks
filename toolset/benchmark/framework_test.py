@@ -231,7 +231,11 @@ class FrameworkTest:
       test.setup_out_err(out, err)
       out.write(header("VERIFYING %s" % test_type.upper()))
       
-      base_url = "http://%s:%s" % (self.benchmarker.server_host, self.port)
+      if self.benchmarker.docker_client: 
+        base_url = "http://%s:%s" % (self.benchmarker.server_host, self.external_port)
+      else:
+        base_url = "http://%s:%s" % (self.benchmarker.server_host, self.port)
+
       
       try:
         results = test.verify(base_url)

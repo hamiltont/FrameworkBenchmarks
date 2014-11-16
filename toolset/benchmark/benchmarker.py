@@ -670,7 +670,7 @@ class Benchmarker:
     print "DOCKER: Allowing %s MB real RAM" % self.docker_server_ram
   
     lxc = " ".join([ "--lxc-conf=\"%s=%s\""%(k,v) for k,v in lxc_options.iteritems()])
-    print "DOCKER: Running this monstrosity: sudo docker run %s --net='host' -i -t %s %s /bin/sh -c '%s'" % (lxc, vols, repo, command)
+    print "DOCKER: Running this monstrosity: sudo docker run %s -i -t %s %s /bin/sh -c '%s'" % (lxc, vols, repo, command)
     
     c.start(cid, binds=mounts, 
       port_bindings={test.port: None}, lxc_conf=lxc_options)
