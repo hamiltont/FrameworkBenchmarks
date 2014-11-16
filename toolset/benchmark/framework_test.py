@@ -296,13 +296,18 @@ class FrameworkTest:
         with open(output_file, 'w'):
           pass
 
-      if test.passed:
+      if not test.failed:
+
+        port_to_use = self.port
+        if self.benchmarker.docker_client: 
+          port_to_use = self.external_port
+
         if test_type == 'plaintext': # One special case
-          remote_script = self.__generate_concurrency_script(test.get_url(), self.port, test.accept_header, levels=[256,1024,4096,16384], pipeline="16")
+          remote_script = self.__generate_concurrency_script(test.get_url(), port_to_use, test.accept_header, levels=[256,1024,4096,16384], pipeline="16")
         elif test.requires_db:
-          remote_script = self.__generate_query_script(test.get_url(), self.port, test.accept_header)
+          remote_script = self.__generate_query_script(test.get_url(), port_to_use, test.accept_header)
         else:
-          remote_script = self.__generate_concurrency_script(test.get_url(), self.port, test.accept_header)
+          remote_script = self.__generate_concurrency_script(test.get_url(), port_to_use, test.accept_header)
         
         # Begin resource usage metrics collection
         self.__begin_logging(test_type)
@@ -676,6 +681,19 @@ class FrameworkTest:
     self.iroot = self.install_root
 
     self.__dict__.update(args)
+
+    if self.benchmarker.docker_client: 
+      map_filepath = self.benchmarker.docker_port_file
+      self.external_port = -1
+      with open(map_filepath) as map_file:
+        data = map_file.read()
+        try:
+          self.external_port = int(data)
+        except ValueError: 
+          print "  Unable to parse external port from '%s'" % data
+      if self.external_port == -1:
+        print "  Fatal error, cannot continue without external port"
+        sys.exit(1)
 
     # ensure directory has __init__.py file so that we can use it as a Python package
     if not os.path.exists(os.path.join(directory, "__init__.py")):

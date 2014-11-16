@@ -20,6 +20,7 @@ import logging
 import socket
 import threading
 import textwrap
+import uuid
 from pprint import pprint
 
 from multiprocessing import Process
@@ -532,6 +533,22 @@ class Benchmarker:
         print "DOCKER: ERROR - Container %s already running. Killing" % repo
         c.stop(container, timeout=15)
 
+    # Need to solve https://github.com/docker/docker/issues/3778 so that 
+    # we can let docker's NAT handle port binding on the host. 
+    # To do this I create a randomly-named mapping file and bind it inside 
+    # the container. Once I've started the container, I determine the port
+    # that was used for test.port and write it into that file. The file is 
+    # only read by run_test before benchmarking, whcih happens after the 
+    # "sleep to ensure framework is ready", so I'm not concerned about it being
+    # read before I've written to it
+    # Wish I could use the container ID in the filename, but I need the command 
+    # before I get the cid, so I cannot
+    maps_dir = "%s/toolset/mappings" % self.fwroot
+    if not os.path.exists(maps_dir):
+      os.makedirs(maps_dir)
+    map_filepath = "%s/%s-%s" % (maps_dir, test.name, str(uuid.uuid4())[:7])  
+    print "DOCKER: Placing port mapping inside %s" % os.path.relpath(map_filepath, self.fwroot)
+    
     # Build run command
     command="toolset/run-tests.py --test %s --docker-client --verbose" % test.name
     command="%s --time %s" % (command, self.timestamp) # We only want one directory for results
@@ -548,7 +565,9 @@ class Benchmarker:
     command="%s --database-host %s" % (command, self.database_host)
     command="%s --client-user %s" % (command, self.client_user)
     command="%s --database-user %s" % (command, self.database_user)
+    command="%s --docker-port-file %s" % (command, os.path.relpath(map_filepath, self.fwroot))
     if self.docker_no_server_stop:
+      print "DOCKER: Using no-server-stop mode. Going to start server, then sleep TFB"
       command="%s --docker-no-server-stop" % command
 
     # Handle SSH identity files
@@ -602,12 +621,13 @@ class Benchmarker:
     # run bash as our one and pass it the command we really want
     command="bash -c \"%s\"" % command
     install_container = c.create_container(repo, command=command,
-      volumes=[toolvolume, reslvolume, ssh_volume, testvolume])
+      volumes=[toolvolume, reslvolume, ssh_volume, testvolume],
+      ports = [int(test.port)])
     cid = install_container['Id']
 
     # Run the test
     print "DOCKER: Preparing to run %s in container %s" % (test.name, cid)
-    
+
     tool_dir = "%s/toolset" % self.fwroot
     resl_dir = "%s/results" % self.fwroot
     ssh__dir = os.path.expanduser("~/.ssh")
@@ -632,7 +652,7 @@ class Benchmarker:
       print "DOCKER: Disabling CPU pinning"
     else:
       lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_server_cpuset)
-      print "DOCKER: Allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
+      print "DOCKER: Allowing processors [%s]" % lxc_options['lxc.cgroup.cpuset.cpus']
     
     if -1 == self.docker_server_cpu:
       print "DOCKER: Disabling CFS bandwidth limits"
@@ -652,7 +672,16 @@ class Benchmarker:
     lxc = " ".join([ "--lxc-conf=\"%s=%s\""%(k,v) for k,v in lxc_options.iteritems()])
     print "DOCKER: Running this monstrosity: sudo docker run %s --net='host' -i -t %s %s /bin/sh -c '%s'" % (lxc, vols, repo, command)
     
-    c.start(cid, binds=mounts, network_mode='host', lxc_conf=lxc_options)
+    c.start(cid, binds=mounts, 
+      port_bindings={test.port: None}, lxc_conf=lxc_options)
+
+    map_port = c.port(cid, test.port)[0]['HostPort']
+    print "DOCKER: Fetching port mapping: docker port %s %s" % (cid, test.port)
+    print "DOCKER: Found %s mapped to host port %s" % (test.port, map_port)
+
+    map_file = open(map_filepath, 'w')
+    map_file.write(map_port)
+    map_file.close()
 
     # Fetch container output
     last_had_newline = True
@@ -766,7 +795,6 @@ class Benchmarker:
         passed_verify = test.verify_urls(out, err)
         out.flush()
         err.flush()
-
 
         if self.docker_client and self.docker_no_server_stop:
           out.write(header("Not benchmarking %s, or calling server stop function." % test.name))
@@ -1285,7 +1313,7 @@ class Benchmarker:
       lxc_options = {}
       if self.docker_client_cpuset:
         lxc_options['lxc.cgroup.cpuset.cpus'] = ",".join(str(x) for x in self.docker_client_cpuset)
-        print "DOCKER: Client allowing processors %s" % lxc_options['lxc.cgroup.cpuset.cpus']
+        print "DOCKER: Client allowing processors [%s]" % lxc_options['lxc.cgroup.cpuset.cpus']
         
         # Update threads to be correct e.g. run wrk with threads == client logical processors
         self.threads = len(self.docker_client_cpuset)

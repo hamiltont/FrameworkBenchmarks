@@ -138,7 +138,7 @@ def main(argv=None):
         With pertest each test gets its own installs directory, but installation takes longer''')
     parser.add_argument('--install-only', action='store_true', default=False, help='Do not run benchmark or verification, just install and exit')
     
-    parser.add_argument('--docker', action='store_true', default=False, help='installs server software inside docker container')
+    parser.add_argument('--docker', action='store_true', default=False, help='Installs and runs server software inside docker container')
     parser.add_argument('--docker-client', action='store_true', default=False, help='Internal Use Only, do not pass. Indicates we are running inside a docker container')
     parser.add_argument('--docker-server-cpu', default=[100], action=StoreSeqAction, help='Percent of total CPU dockerized servers will be able to access (type int-sequence)')
     parser.add_argument('--docker-server-ram', default=[1000], action=StoreSeqAction, help='RAM in MB that CPU dockerized servers will be able to access (type int-sequence)')
@@ -146,6 +146,7 @@ def main(argv=None):
     parser.add_argument('--docker-client-cpuset', default=[1], action=StoreSeqAction, help='Set processor affinity to these physical processor ids (type int-sequence)')
     parser.add_argument('--docker-client-ram', default=1024, type=int, help='RAM in MB that CPU dockerized load generator will be able to access')
     parser.add_argument('--docker-no-server-stop', action='store_true', default=False, help='Turns on server, but does not benchmark it or shut it down. Just sleeps TFB and leaves server running')
+    parser.add_argument('--docker-port-file', default='', help='Internal used only, do not pass. Allows containerized server to know what public port it is exposed on')
 
     # Test options
     parser.add_argument('--test', nargs='+', help='names of tests to run')
