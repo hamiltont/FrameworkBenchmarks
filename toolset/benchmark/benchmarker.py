@@ -675,8 +675,8 @@ class Benchmarker:
     c.start(cid, binds=mounts, 
       port_bindings={test.port: None}, lxc_conf=lxc_options)
 
-    map_port = c.port(cid, test.port)[0]['HostPort']
     print "DOCKER: Fetching port mapping: docker port %s %s" % (cid, test.port)
+    map_port = c.port(cid, test.port)[0]['HostPort']
     print "DOCKER: Found %s mapped to host port %s" % (test.port, map_port)
 
     map_file = open(map_filepath, 'w')
