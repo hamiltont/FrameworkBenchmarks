@@ -686,7 +686,9 @@ class FrameworkTest:
 
     self.__dict__.update(args)
 
-    if self.benchmarker.docker_client: 
+    # When running server installation in container we don't pass the 
+    # port map file
+    if self.benchmarker.docker_client and not self.benchmarker.install == 'server':
       map_filepath = self.benchmarker.docker_port_file
       self.external_port = -1
       with open(map_filepath) as map_file:
